@@ -19,6 +19,11 @@ Créer une branche locale qui pointe sur une branche distante:
     - git checkout -b nom_de_branche origin/nom_de_branche (exemple git checkout -b Abel origin/Abel)
 
 
+Mettre a jour les modifs github puis les recuperer en local:
+    - git fetch origin
+    - git pull origin nom_de_branche (exemple git pull origin Abel)
+
+
 
 
 
