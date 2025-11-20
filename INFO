@@ -1,0 +1,24 @@
+modification d'une branche:
+Tout sur VScode:
+    - onglet source control
+    - appuyer sur le + a coté de "changes"
+    - mettre un message de commit
+    - appuyer sur commit
+    - appuyer sur sync-commit
+
+Voir les branches locales:
+    - git branch
+
+Voir les branches distantes:
+    - git branch -r
+
+Commande pour changer de branche:
+    - git checkout nom_de_branche (exemple git checkout Abel ou git checkout main)
+
+Créer une branche locale qui pointe sur une branche distante:
+    - git checkout -b nom_de_branche origin/nom_de_branche (exemple git checkout -b Abel origin/Abel)
+
+
+
+
+
