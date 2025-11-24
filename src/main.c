@@ -6,4 +6,3 @@ int main() {
     return 0;
 }
 
-// This program prints "Hello, World!" to the console using the C17 standard.
