@@ -1,16 +1,22 @@
+// process.h
 #ifndef PROCESS_H
 #define PROCESS_H
 
-/**
- * Traite la logique principale du programme.
- * Peut représenter les calculs, la gestion du jeu, etc.
- */
-void process_run(void);
+#include <stdbool.h>
 
-/**
- * Fonction utilitaire de traitement.
- * Peut être remplacée ou complétée selon votre besoin.
- */
-int process_compute(int value);
+typedef struct process_info {
+    int pid;
+    char name[256];
+    char user[64];
+    float cpu_usage;
+    float mem_usage;
+    long int runtime; // en secondes
+} process_info;
 
-#endif
+// Liste tous les processus sur la machine locale
+int liste_processsus_locaux(process_info **processes);
+
+// Libère la mémoire allouée pour la liste des processus
+void libere_liste_processus(process_info *processes, int count);
+
+#endif // PROCESS_H
