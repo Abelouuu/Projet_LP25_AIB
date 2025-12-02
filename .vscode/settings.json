@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "stdio.h": "c",
-        "getopt.h": "c"
+        "getopt.h": "c",
+        "options.h": "c"
     }
 }

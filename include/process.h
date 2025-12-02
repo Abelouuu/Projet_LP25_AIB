@@ -19,4 +19,6 @@ int liste_processsus_locaux(process_info **processes);
 // Libère la mémoire allouée pour la liste des processus
 void libere_liste_processus(process_info *processes, int count);
 
+void kill_processus(int pid);
+
 #endif // PROCESS_H

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 // Structure pour contenir les options du programme
-struct program_options {
+typedef struct{
     bool help;
     bool dry_run;
     char *remote_config;
@@ -15,17 +15,21 @@ struct program_options {
     char *username;
     char *password;
     bool all;
-};
+} program_options;
 
 //Initialiser les options par défaut
-void initialiser_options(struct program_options *options);
+void initialiser_options(program_options *options);
 
 // Traiter les options de la ligne de commande
-void traiter_options(int argc, char **argv, struct program_options *options);
+void traiter_options(int argc, char **argv, program_options *options);
 
 // Afficher l'aide du programme (appel de -h ou --help)
 void affiche_aide(const char *nom_programme);
 
-void valider_options(struct program_options *options);
+void valider_options(program_options *options);
+
+void free_options(program_options *opt);
+
+void dry_run(program_options *options);
 
 #endif
