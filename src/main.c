@@ -2,9 +2,10 @@
 #include <stdio.h>
 
 #include "options.h"
+#include "network.h"
 
 int main(int argc, char **argv) {
-    struct program_options opts;
+    program_options opts;
     initialiser_options(&opts);
     traiter_options(argc, argv, &opts);
     valider_options(&opts);
@@ -22,6 +23,10 @@ int main(int argc, char **argv) {
     printf("password: %s\n", opts.password ? opts.password : "NULL");
     printf("all: %s\n", opts.all ? "true" : "false");
     printf("=======================\n");
+
+    lire_config(opts.remote_config, NULL, NULL);
+
+
 
     return 0;
 }
