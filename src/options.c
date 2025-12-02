@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <ctype.h>
 
 #include "options.h"
 
@@ -124,6 +125,76 @@ void valider_options(program_options *options) {
     if (options->all && (options->remote_config == NULL || options->remote_server == NULL)) {
         printf("L'option --all nécessite que --connection-type et --remote-server soient spécifiés.\n");
         exit(EXIT_FAILURE);
+    }
+
+    //verifie que le type de connection est ssh ou telnet
+    if ((strcmp(options->connection_type, "ssh") != 0) && (strcmp(options->connection_type, "telnet") != 0)) {
+        printf("Erreur : le type de connexion n'est pas pris en compte (choisir ssh ou telnet)\n");
+        exit(EXIT_FAILURE);
+    }
+
+    //gerer si le type de connection correspond au port
+    if ((strcmp(options->connection_type, "ssh") == 0 && options->port != 22) ||
+    (strcmp(options->connection_type, "telnet") == 0 && options->port != 23)) {
+        printf("Erreur : le port ne correspond pas au type de connexion\n");
+        exit(EXIT_FAILURE);
+    }
+
+    //Gérer les conflits entre login, username, remote-server et demander le password si il n'as pas été donnée
+    if(options->login){
+        //verification de la syntaxe du login
+        char *at_sign = strchr(options->login, '@');
+        if (!at_sign || at_sign == options->login || *(at_sign + 1) == '\0') {
+            exit(EXIT_FAILURE);
+        }
+        if (strchr(at_sign + 1, '@')) {
+            exit(EXIT_FAILURE);
+        }
+
+        //=====syntaxe bonne=====//
+
+        //verifie les conflits avec username et remote-server
+        if (options->username || options->remote_server)
+        {
+            char reponse;
+            printf("\n[WARNING] L'options --login (-l) ne peut pas être utilisé en même temps que les options --username (-u) et --password (-p)\n");
+            printf("Les options --username et --password vont être écraser pas l'argument --login \n");
+            printf("Êtes-vous sur de vouloir continué ? [Y/o] ");
+            
+            do {
+                reponse = getchar();
+            } while (isspace(reponse));
+
+            if (reponse != 'Y' && reponse != 'y') {
+                printf("Opération annulée par l'utilisateur.\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        //changer le username et le remote-server
+
+        //on sépare le login en 2
+        *at_sign = '\0';
+
+        free(options->username);
+        free(options->remote_server);
+
+        options->username = strdup(options->login);
+        options->remote_server = strdup(at_sign+1);
+    }
+
+    //si -s est rentré, alors -u et -p doivent contenir une valeur
+    if (options->remote_server) {
+        if(!options->username){
+            printf("username de la machine %s: ", options->remote_server);
+            options->username = malloc(100);
+            scanf("%99s", options->username);
+        }
+        if(!options->password) {
+            printf("password de la machine %s: ", options->remote_server);
+            options->password = malloc(100);
+            scanf("%99s", options->password);
+        }
     }
 }
 
