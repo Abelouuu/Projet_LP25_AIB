@@ -1,20 +1,11 @@
 #ifndef UI_H
 #define UI_H
 
-/**
- * Initialise l'interface utilisateur.
- * À appeler avant tout affichage ou interaction.
- */
-void ui_init(void);
+#include "process.h"
 
-/**
- * Affiche le menu principal ou l'écran principal.
- */
-void ui_display_main(void);
 
-/**
- * Nettoie l'interface et libère les ressources graphiques si nécessaire.
- */
-void ui_cleanup(void);
+
+/* Boucle d'affichage interactive façon htop (avec ncurses) */
+void ui_loop_local(void);
 
 #endif

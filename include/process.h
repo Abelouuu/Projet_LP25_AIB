@@ -1,22 +1,39 @@
-// process.h
+/* process.h
+ * Public API for the Process Management Module
+ */
+
 #ifndef PROCESS_H
 #define PROCESS_H
 
-#include <stdbool.h>
+#include <stddef.h>
 
-typedef struct process_info {
-    int pid;
-    char name[256];
-    char user[64];
-    float cpu_usage;
-    float mem_usage;
-    long int runtime; // en secondes
-} process_info;
+typedef struct Process {
+    int   pid;          // Process ID
+    char  user[32];     // Name of the user
+    char  state;        /* R, S, Z, T, ... */
+    long  mem_kb;       /* Memory usage (VmRSS) in kB */
+    char  cmd[256];     /* Command / Process name */
+    struct Process *next;
+} Process;
 
-// Liste tous les processus sur la machine locale
-int liste_processsus_locaux(process_info **processes);
+/* Reads all processes from /proc and returns a linked list */
+Process *read_processes(void);
 
-// Libère la mémoire allouée pour la liste des processus
-void libere_liste_processus(process_info *processes, int count);
+/* Sorts processes by memory usage (descending order) */
+Process *sort_by_mem(Process *head);
 
-#endif // PROCESS_H
+/* Prints the first ~50 processes (debug use) */
+void print_processes(Process *head, const char *machine_name);
+
+/* Frees the entire process list */
+void free_processes(Process *head);
+
+/* Serializes process list into a text buffer:
+   Format: pid;user;mem;state;cmd\n
+*/
+size_t serialize_processes(Process *head, char *buffer, size_t bufsize);
+
+/* Deserializes a text buffer into a linked list of Process */
+Process *deserialize_processes(const char *buffer);
+
+#endif /* PROCESS_H */
