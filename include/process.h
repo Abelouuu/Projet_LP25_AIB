@@ -16,19 +16,19 @@ typedef struct Process {
     struct Process *next;
 } Process;
 
-/* Reads all processes from /proc and returns a linked list */
+// lire tous les processus depuis /proc et retourner une liste chaînée
 Process *read_processes(void);
 
-/* Sorts processes by memory usage (descending order) */
+// trier par usage memoire (décroissant)
 Process *sort_by_mem(Process *head);
 
-/* Prints the first ~50 processes (debug use) */
+// affichier les processus pour le débogage
 void print_processes(Process *head, const char *machine_name);
 
-/* Frees the entire process list */
+// libérer la mémoire allouée pour la liste des processus
 void free_processes(Process *head);
 
-/* Serializes process list into a text buffer:
+/* Serializes process list au texte buffer:
    Format: pid;user;mem;state;cmd\n
 */
 size_t serialize_processes(Process *head, char *buffer, size_t bufsize);
@@ -37,8 +37,11 @@ size_t serialize_processes(Process *head, char *buffer, size_t bufsize);
 Process *deserialize_processes(const char *buffer);
 
 int kill_process_soft(int pid);  // avec SIGTERM
+
 int kill_process_hard(int pid); // avec SIGKILL
+
 int pause_process(int pid); // avec SIGSTOP
+
 int continue_process(int pid); // avec SIGCONT
 
 
