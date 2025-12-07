@@ -36,4 +36,10 @@ size_t serialize_processes(Process *head, char *buffer, size_t bufsize);
 /* Deserializes a text buffer into a linked list of Process */
 Process *deserialize_processes(const char *buffer);
 
+int kill_process_soft(int pid);  // avec SIGTERM
+int kill_process_hard(int pid); // avec SIGKILL
+int pause_process(int pid); // avec SIGSTOP
+int continue_process(int pid); // avec SIGCONT
+
+
 #endif /* PROCESS_H */
