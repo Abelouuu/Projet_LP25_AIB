@@ -1,4 +1,3 @@
-
 #define _GNU_SOURCE
 #include "process.h"
 
@@ -12,7 +11,8 @@
 #include <signal.h>
 
 
-// verifier si une chaîne est un nombre
+
+// vérifier si une chaîne est entièrement numérique (pour les PID)
 static int is_number(const char *s) {
     if (!s || !*s) return 0;
     while (*s) {
@@ -21,7 +21,8 @@ static int is_number(const char *s) {
     }
     return 1;
 }
-// convertir uid en nom d'utilisateur
+
+// convertir un uid  en nom d'utilisateur
 static void uid_to_user(uid_t uid, char *buffer, size_t size) {
     struct passwd *pw = getpwuid(uid);
     if (pw && pw->pw_name) {
@@ -31,7 +32,8 @@ static void uid_to_user(uid_t uid, char *buffer, size_t size) {
         snprintf(buffer, size, "%d", (int)uid);
     }
 }
-// lire le fichier /proc/[pid]/status pour obtenir les informations du processus
+
+// lire /proc/[pid]/status pour récupérer : Name, State, VmRSS, Uid
 static int read_status(int pid,
                        char *state,
                        long *mem_kb,
@@ -50,106 +52,159 @@ static int read_status(int pid,
     *state = '?';
     cmd[0] = '\0';
     uid_t uid = 0;
+
     while (fgets(line, sizeof(line), f)) {
-        if (strncmp(line, "Name:", 5) == 0)
+        if (strncmp(line, "Name:", 5) == 0) {
+            // ligne de type : "Name:\tbash"
             sscanf(line, "Name:\t%255s", cmd);
-
-        else if (strncmp(line, "State:", 6) == 0)
+        } else if (strncmp(line, "State:", 6) == 0) {
+            // ligne de type : "State:\tS (sleeping)"
             sscanf(line, "State:\t%c", state);
-
-        else if (strncmp(line, "VmRSS:", 6) == 0)
+        } else if (strncmp(line, "VmRSS:", 6) == 0) {
+            // ligne de type : "VmRSS:\t  12345 kB
             sscanf(line, "VmRSS:%ld kB", mem_kb);
-
-        else if (strncmp(line, "Uid:", 4) == 0)
+        } else if (strncmp(line, "Uid:", 4) == 0) {
+            // ligne de type // "Uid:\t1000\t1000\t1000\t1000"
             sscanf(line, "Uid:\t%u", &uid);
+        }
     }
+
     fclose(f);
     uid_to_user(uid, user, user_sz);
     return 0;
 }
 
-// ajouter un processus au début de la liste chaînée
+// insérer un Process au début de la liste
 static Process *push_front(Process *head, Process *p) {
     p->next = head;
     return p;
 }
 
- // Lecture de la liste des processus
- 
-    Process *read_processes(void) {
-    DIR *d = opendir("/proc"); // ouvrir le répertoire /proc
-    if (!d) { // erreur
+// lire MemTotal (RAM totale) depuis /proc/meminfo, en kB
+static long get_total_mem_kb(void) {
+    FILE *f = fopen("/proc/meminfo", "r");
+    if (!f) {
+        perror("fopen /proc/meminfo");
+        return 0;
+    }
+
+    char line[256];
+    long mem_total = 0;
+
+    while (fgets(line, sizeof(line), f)) {
+        if (strncmp(line, "MemTotal:", 9) == 0) {
+            // ex: "MemTotal:       16343428 kB"
+            sscanf(line, "MemTotal: %ld kB", &mem_total);
+            break;
+        }
+    }
+
+    fclose(f);
+    return mem_total;
+}
+
+
+// Lecture des processus
+
+Process *read_processes(void) {
+    DIR *d = opendir("/proc");
+    if (!d) {
         perror("opendir /proc");
         return NULL;
     }
 
-    struct dirent *ent; // entrée de répertoire
-    Process *head = NULL; // tête de la liste chaînée
+    Process *head = NULL;
+    struct dirent *ent;
 
-    while ((ent = readdir(d)) != NULL) { // lire chaque entrée
-        if (!is_number(ent->d_name)) // ignorer si ce n'est pas un nombre
+    while ((ent = readdir(d)) != NULL) {
+        if (!is_number(ent->d_name))
             continue;
 
-        int pid = atoi(ent->d_name); // convertir en entier
+        int pid = atoi(ent->d_name);
 
-        Process *p = calloc(1, sizeof(Process)); // allouer de la mémoire pour le processus
+        Process *p = calloc(1, sizeof(Process));
         if (!p) continue;
 
-        p->pid = pid; // définir le PID
+        p->pid = pid;
 
         if (read_status(pid, &p->state, &p->mem_kb,
                         p->cmd, sizeof(p->cmd),
                         p->user, sizeof(p->user)) != 0)
         {
-            free(p); // erreur de lecture, libérer la mémoire
+            free(p);
             continue;
         }
 
-        head = push_front(head, p); // ajouter à la liste chaînée
+        // %MEM sera calculé plus tard par update_mem_percentage()
+        p->mem_pct = 0.0;
+
+        head = push_front(head, p);
     }
 
     closedir(d);
     return head;
 }
 
-// Trier la liste des processus par utilisation de la mémoire (décroissant)
-Process *sort_by_mem(Process *head) { 
-    Process *sorted = NULL; // la tête de la liste triée
 
-    while (head) { // parcourir chaque processus
+// calcul du pourcentage de mémoire (%MEM)
+
+void update_mem_percentage(Process *head) {
+    long total_kb = get_total_mem_kb();
+    if (total_kb <= 0) {
+        // impossible de calculer, on met tout à 0
+        for (Process *p = head; p; p = p->next) {
+            p->mem_pct = 0.0;
+        }
+        return;
+    }
+
+    for (Process *p = head; p; p = p->next) {
+        p->mem_pct = (double)p->mem_kb * 100.0 / (double)total_kb;
+    }
+}
+
+
+// tri par %MEM décroissant
+
+Process *sort_by_mem(Process *head) {
+    Process *sorted = NULL;
+
+    while (head) {
         Process *next = head->next;
 
-        if (!sorted || head->mem_kb > sorted->mem_kb) { // comparer et insérer
+        if (!sorted || head->mem_pct > sorted->mem_pct) {
             head->next = sorted;
             sorted = head;
-        } else { // sinon trouver la bonne position
+        } else {
             Process *cur = sorted;
-            while (cur->next && cur->next->mem_kb >= head->mem_kb)
+            while (cur->next && cur->next->mem_pct >= head->mem_pct)
                 cur = cur->next;
 
             head->next = cur->next;
             cur->next = head;
         }
 
-        head = next; // passer au processus suivant
+        head = next;
     }
 
     return sorted;
 }
 
-// petit focntion d'affichage des processus pour tester (deso basil)
+
+// affichage texte simple (pour débogage)
+
 void print_processes(Process *head, const char *machine_name) {
     if (!machine_name) machine_name = "local";
 
     printf("=== Process list from [%s] ===\n", machine_name);
-    printf("%-7s %-12s %-8s %-5s %-s\n",
-           "PID", "USER", "MEM(kB)", "ST", "CMD");
+    printf("%-7s %-12s %-7s %-4s %-s\n",
+           "PID", "USER", "%MEM", "ST", "CMD");
     printf("-----------------------------------------------------------\n");
 
     int count = 0;
     for (Process *p = head; p; p = p->next) {
-        printf("%-7d %-12s %-8ld %-5c %-s\n",
-               p->pid, p->user, p->mem_kb, p->state, p->cmd);
+        printf("%-7d %-12s %6.2f %-4c %-s\n",
+               p->pid, p->user, p->mem_pct, p->state, p->cmd);
 
         if (++count == 50) {
             printf("... (truncated)\n");
@@ -158,7 +213,9 @@ void print_processes(Process *head, const char *machine_name) {
     }
 }
 
-// Libérer la mémoire allouée pour la liste des processus
+
+// libération mémoire
+
 void free_processes(Process *head) {
     while (head) {
         Process *tmp = head;
@@ -166,78 +223,7 @@ void free_processes(Process *head) {
         free(tmp);
     }
 }
-// FIN LOCAL PROCESS
-
-// Partie network (serialization et deserialization)
-size_t serialize_processes(Process *head, char *buffer, size_t bufsize) {
-    size_t used = 0; // nombre d'octets utilisés dans le tampon
-
-    for (Process *p = head; p; p = p->next) { // parcourir chaque processus
-        int n = snprintf(buffer + used, bufsize - used, "%d;%s;%ld;%c;%s\n", p->pid, p->user, p->mem_kb, p->state, p->cmd); // sérialiser le processus
-
-        if (n < 0 || (size_t)n >= bufsize - used) // vérifier les erreurs si le token ne rentre pas
-            break;
-
-        used += (size_t)n; // mettre à jour le nombre d'octets utilisés
-    }
-
-    return used; // retourner le nombre total d'octets utilisés
-}
-
- // Deserialization
-
-
-static int parse_line(const char *line, Process *p) { // analyser la chaine qui représente un processus serialisé
-    char tmp[512]; // token temporaire pour la ligne
-    strncpy(tmp, line, sizeof(tmp)); // copier la ligne dans le token temporaire
-    tmp[sizeof(tmp) - 1] = '\0';
-
-    char *saveptr = NULL; // pointeur pour strtok_r
-
-    char *pid_str   = strtok_r(tmp, ";", &saveptr); // extraire chaque champ
-    char *user_str  = strtok_r(NULL, ";", &saveptr);
-    char *mem_str   = strtok_r(NULL, ";", &saveptr);
-    char *state_str = strtok_r(NULL, ";", &saveptr);
-    char *cmd_str   = strtok_r(NULL, "\n", &saveptr);
-
-    if (!pid_str || !user_str || !mem_str || !state_str || !cmd_str) // vérifier si tous les champs sont présents
-        return -1;
-
-    p->pid = atoi(pid_str); // convertir et assigner les champs
-    strncpy(p->user, user_str, sizeof(p->user)); // copier le nom d'utilisateur
-    p->mem_kb = atol(mem_str); // convertir et assigner la mémoire 
-    p->state = state_str[0]; // assigner l'état
-    strncpy(p->cmd, cmd_str, sizeof(p->cmd)); // copier la commande
-    p->next = NULL; // initialiser le pointeur suivant à NULL
-    return 0;
-}
-// désérialiser la chaîne en une liste chaînée de processus
-Process *deserialize_processes(const char *buffer) {
-    if (!buffer) return NULL;
-
-    char *copy = strdup(buffer); // faire une copie modifiable du tampon
-    if (!copy) return NULL; // vérifier l'allocation
-
-    Process *head = NULL; // tête de la liste chaînée
-    char *saveptr = NULL; // pointeur pour strtok_r
-    char *line = strtok_r(copy, "\n", &saveptr); // diviser en lignes
- 
-    while (line) { // pour chaque ligne
-        Process *p = calloc(1, sizeof(Process)); // allouer de la mémoire pour un nouveau processus
-        if (!p) break;
-
-        if (parse_line(line, p) == 0) //    analyser la ligne et ajouter à la liste chaînée
-            head = push_front(head, p); // ajouter à la liste chaînée
-        else
-            free(p); // erreur d'analyse, libérer la mémoire
-
-        line = strtok_r(NULL, "\n", &saveptr); // passer à la ligne suivante
-    }
-
-    free(copy); // libérer la copie temporaire
-    return head; // retourner la tête de la liste chaînée
-
-    // envoie un signal donné à un PID, avec message d'erreur propre
+// envoi de signal à un processus donné
 static int send_signal_to_pid(int pid, int sig, const char *action_name) {
     if (kill(pid, sig) == -1) {
         perror(action_name);
@@ -245,25 +231,23 @@ static int send_signal_to_pid(int pid, int sig, const char *action_name) {
     }
     return 0;
 }
-}
-// "tuer" un processus : d'abord SIGTERM
+
+// Arrêt (SIGTERM)
 int kill_process_soft(int pid) {
-    // arrêt "propre"
     return send_signal_to_pid(pid, SIGTERM, "kill(SIGTERM)");
 }
-// "tuer" un processus : SIGKILL
+
+// Arrêt (SIGKILL)
 int kill_process_hard(int pid) {
-    // arrêt forcé 
     return send_signal_to_pid(pid, SIGKILL, "kill(SIGKILL)");
 }
 
-// mettre en pause un processus
+// Pause (SIGSTOP)
 int pause_process(int pid) {
     return send_signal_to_pid(pid, SIGSTOP, "kill(SIGSTOP)");
 }
 
-// reprendre un processus stoppé
+// Reprise (SIGCONT)
 int continue_process(int pid) {
     return send_signal_to_pid(pid, SIGCONT, "kill(SIGCONT)");
 }
-
