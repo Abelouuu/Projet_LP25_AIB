@@ -1,4 +1,3 @@
-/* Implémente les fonctionnalités de gestion de processus sur une machine linux */
 
 #define _GNU_SOURCE
 #include "process.h"
@@ -10,6 +9,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <signal.h>
 
 
 // verifier si une chaîne est un nombre
@@ -236,4 +236,34 @@ Process *deserialize_processes(const char *buffer) {
 
     free(copy); // libérer la copie temporaire
     return head; // retourner la tête de la liste chaînée
+
+    // envoie un signal donné à un PID, avec message d'erreur propre
+static int send_signal_to_pid(int pid, int sig, const char *action_name) {
+    if (kill(pid, sig) == -1) {
+        perror(action_name);
+        return -1;
+    }
+    return 0;
 }
+}
+// "tuer" un processus : d'abord SIGTERM
+int kill_process_soft(int pid) {
+    // arrêt "propre"
+    return send_signal_to_pid(pid, SIGTERM, "kill(SIGTERM)");
+}
+// "tuer" un processus : SIGKILL
+int kill_process_hard(int pid) {
+    // arrêt forcé 
+    return send_signal_to_pid(pid, SIGKILL, "kill(SIGKILL)");
+}
+
+// mettre en pause un processus
+int pause_process(int pid) {
+    return send_signal_to_pid(pid, SIGSTOP, "kill(SIGSTOP)");
+}
+
+// reprendre un processus stoppé
+int continue_process(int pid) {
+    return send_signal_to_pid(pid, SIGCONT, "kill(SIGCONT)");
+}
+
