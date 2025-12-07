@@ -1,39 +1,39 @@
-/* process.h
- * Public API for the Process Management Module
- */
-
 #ifndef PROCESS_H
 #define PROCESS_H
 
-#include <stddef.h>
+#include <sys/types.h>  // pour pid_t 
+#include <stddef.h>     // pour size_t
 
+// représentation d'un processus
 typedef struct Process {
-    int   pid;          // Process ID
-    char  user[32];     // Name of the user
-    char  state;        /* R, S, Z, T, ... */
-    long  mem_kb;       /* Memory usage (VmRSS) in kB */
-    char  cmd[256];     /* Command / Process name */
-    struct Process *next;
+    int   pid;               // PID du processus
+    char  user[32];          // nom d'utilisateur
+    long  mem_kb;            // mémoire résidente en kB (VmRSS)
+    double mem_pct;          // pourcentage de la RAM totale (%MEM)
+    char  state;             // état (R, S, D, T, Z, etc.)
+    char  cmd[256];          // nom de la commande
+    struct Process *next;    // chaînage
 } Process;
 
-/* Reads all processes from /proc and returns a linked list */
+// lecture de la liste des processus locaux depuis /proc
 Process *read_processes(void);
 
-/* Sorts processes by memory usage (descending order) */
+// calcule le %MEM pour chaque processus (en lisant /proc/meminfo)
+void update_mem_percentage(Process *head);
+
+// trie la liste par %MEM décroissant (plus gourmand en premier)
 Process *sort_by_mem(Process *head);
 
-/* Prints the first ~50 processes (debug use) */
+// affiche les processus (limité à 50 lignes pour éviter le spam)
 void print_processes(Process *head, const char *machine_name);
 
-/* Frees the entire process list */
+// libère toute la liste chaînée
 void free_processes(Process *head);
 
-/* Serializes process list into a text buffer:
-   Format: pid;user;mem;state;cmd\n
-*/
-size_t serialize_processes(Process *head, char *buffer, size_t bufsize);
-
-/* Deserializes a text buffer into a linked list of Process */
-Process *deserialize_processes(const char *buffer);
+// controle des processus via signaux
+int kill_process_soft(int pid);   // SIGTERM (arrêt propre)
+int kill_process_hard(int pid);   // SIGKILL (arrêt forcé)
+int pause_process(int pid);       // SIGSTOP (pause)
+int continue_process(int pid);    // SIGCONT (reprendre)
 
 #endif /* PROCESS_H */

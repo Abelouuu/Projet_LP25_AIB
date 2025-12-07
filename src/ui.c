@@ -100,10 +100,10 @@ void ui_loop_local(void) {
             running = 0;
         } else if ((ch == 'k' || ch == 'K') && count > 0) {
             Process *p = get_nth_process(list, selected);
-            if (p) kill(p->pid, SIGTERM);
+            if (p) kill_process_soft(p->pid);
         } else if (ch == 'p' || ch == 'P') {
             Process *p = get_nth_process(list, selected);
-            if (p) kill(p->pid, SIGSTOP);
+            if (p) pause_process(p->pid); 
         } else if (ch == 'r' || ch == 'R') {
             Process *p = get_nth_process(list, selected);
             if (p) kill(p->pid, SIGCONT);
