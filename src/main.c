@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <ncurses.h>*
+#include <ncurses.h>
 #include "options.h"
 #include "network.h"
 #include "process.h"
