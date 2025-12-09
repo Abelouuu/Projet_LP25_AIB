@@ -39,7 +39,6 @@ void traiter_options(int argc, char **argv, program_options *options){
         switch (opt) {
             case 'h':
                 options->help = true;
-                affiche_aide(argv[0]);
                 break;
             case 1:
                 options->dry_run = true;
@@ -105,6 +104,8 @@ void traiter_options(int argc, char **argv, program_options *options){
     valider_options(options);
 }
 
+<<<<<<< HEAD
+=======
 void affiche_aide(const char *nom_programme) {
     printf("Utilisation: %s [options]\n", nom_programme);
     printf("Options:\n");
@@ -120,6 +121,7 @@ void affiche_aide(const char *nom_programme) {
     printf("  -a, --all                  Appliquer à tous les éléments\n");
 }
 
+>>>>>>> Abel
 void valider_options(program_options *options) {
     // -a necessite -c et -s
     if (options->all && (options->remote_config == NULL || options->remote_server == NULL)) {
