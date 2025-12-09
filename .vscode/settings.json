@@ -1,5 +1,25 @@
 {
     "files.associations": {
-        "stdio.h": "c"
-    }
+        "stdio.h": "c",
+        "getopt.h": "c",
+        "options.h": "c",
+        "stdlib.h": "c"
+    },
+    "github.copilot.enable": {
+        "*": true,
+        "plaintext": false,
+        "markdown": false,
+        "scminput": false
+    },
+    "editor.inlineSuggest.enabled": true,
+    "github.copilot.editor.enableCodeActions": true,
+    "github.copilot.chat.alternateGptPrompt.enabled": true,
+    "github.copilot.chat.anthropic.thinking.enabled": true,
+    "github.copilot.chat.editor.temporalContext.enabled": true,
+    "github.copilot.chat.codesearch.enabled": true,
+    "github.copilot.chat.newWorkspace.useContext7": false,
+    "github.copilot.chat.generateTests.codeLens": false,
+    "github.copilot.chat.anthropic.tools.websearch.enabled": true,
+    "github.copilot.chat.languageContext.inline.typescript.enabled": false,
+    "chat.extensionUnification.enabled": false
 }

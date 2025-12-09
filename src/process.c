@@ -34,6 +34,7 @@ static void uid_to_user(uid_t uid, char *buffer, size_t size) {
 }
 
 // lire /proc/[pid]/status pour récupérer : Name, State, VmRSS, Uid
+// lire /proc/[pid]/status pour récupérer : Name, State, VmRSS, Uid
 static int read_status(int pid,
                        char *state,
                        long *mem_kb,
@@ -54,18 +55,32 @@ static int read_status(int pid,
     uid_t uid = 0;
 
     while (fgets(line, sizeof(line), f)) {
+
         if (strncmp(line, "Name:", 5) == 0) {
-            // ligne de type : "Name:\tbash"
-            sscanf(line, "Name:\t%255s", cmd);
+           
+            if (cmd && cmd_sz > 1) {
+                char fmt[32];
+                snprintf(fmt, sizeof(fmt), "Name:\t%%%zus", cmd_sz - 1);
+                if (sscanf(line, fmt, cmd) != 1) {
+                    cmd[0] = '\0';
+                }
+            }
+
         } else if (strncmp(line, "State:", 6) == 0) {
             // ligne de type : "State:\tS (sleeping)"
             sscanf(line, "State:\t%c", state);
+
         } else if (strncmp(line, "VmRSS:", 6) == 0) {
-            // ligne de type : "VmRSS:\t  12345 kB
-            sscanf(line, "VmRSS:%ld kB", mem_kb);
+            // ligne de type : "VmRSS:\t  12345 kB"
+            if (sscanf(line, "VmRSS: %ld kB", mem_kb) != 1) {
+                *mem_kb = 0;
+            }
+
         } else if (strncmp(line, "Uid:", 4) == 0) {
-            // ligne de type // "Uid:\t1000\t1000\t1000\t1000"
-            sscanf(line, "Uid:\t%u", &uid);
+            // ligne de type : "Uid:\t1000\t1000\t1000\t1000"
+            if (sscanf(line, "Uid: %u", &uid) != 1) {
+                uid = 0;
+            }
         }
     }
 
@@ -73,6 +88,7 @@ static int read_status(int pid,
     uid_to_user(uid, user, user_sz);
     return 0;
 }
+
 
 // insérer un Process au début de la liste
 static Process *push_front(Process *head, Process *p) {
@@ -251,3 +267,4 @@ int pause_process(int pid) {
 int continue_process(int pid) {
     return send_signal_to_pid(pid, SIGCONT, "kill(SIGCONT)");
 }
+/* Implémente les fonctionnalités de gestion de processus sur une machine linux */
