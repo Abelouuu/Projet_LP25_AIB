@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <ncurses.h>
+#include <ncurses.h>*
 #include "options.h"
 #include "network.h"
 #include "process.h"
@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
         // N'oublie pas de libérer la mémoire après
         free_machine_list(liste_machines, nb_machines);
     }
+    sleep(0);
 
     sleep(0);
 
@@ -95,7 +96,6 @@ int main(int argc, char **argv) {
 
         usleep(150000);
     }
-
     ui_shutdown();
     return 0;
 }
