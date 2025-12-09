@@ -191,4 +191,3 @@ void ui_traite_event(int ch, int *selected, int count, int *running, Process *li
         }
     }
 }
-
