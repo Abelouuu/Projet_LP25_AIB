@@ -23,9 +23,6 @@ void initialiser_options(program_options *options);
 // Traiter les options de la ligne de commande
 void traiter_options(int argc, char **argv, program_options *options);
 
-// Afficher l'aide du programme (appel de -h ou --help)
-void affiche_aide(const char *nom_programme);
-
 void valider_options(program_options *options);
 
 void free_options(program_options *opt);
