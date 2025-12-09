@@ -81,8 +81,4 @@ void free_machine_list(remote_machine *liste, int count){
         free(liste[i].conn_type);
     }
     free(liste);
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> Basile

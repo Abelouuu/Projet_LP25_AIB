@@ -25,13 +25,9 @@ void traiter_options(int argc, char **argv, program_options *options);
 
 void valider_options(program_options *options);
 
-<<<<<<< HEAD
-void valider_options(program_options *options);
-=======
 void free_options(program_options *opt);
 
 void dry_run(program_options *options);
->>>>>>> Basile
 
 void free_options(program_options *opt);
 

@@ -36,8 +36,4 @@ int kill_process_hard(int pid);   // SIGKILL (arrêt forcé)
 int pause_process(int pid);       // SIGSTOP (pause)
 int continue_process(int pid);    // SIGCONT (reprendre)
 
-<<<<<<< HEAD
 #endif /* PROCESS_H */
-=======
-#endif /* PROCESS_H */
->>>>>>> Basile

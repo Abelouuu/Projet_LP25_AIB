@@ -61,15 +61,6 @@ int main(int argc, char **argv) {
         // N'oublie pas de libérer la mémoire après
         free_machine_list(liste_machines, nb_machines);
     }
-
-<<<<<<< HEAD
-    sleep(1);
-
-    ui_loop_local();
-
-    return 0;
-}
-=======
     sleep(0);
 
     ui_init();
@@ -109,4 +100,3 @@ int main(int argc, char **argv) {
     ui_shutdown();
     return 0;
 }
->>>>>>> Basile
