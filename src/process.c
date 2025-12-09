@@ -56,8 +56,11 @@ static int read_status(int pid,
 
     while (fgets(line, sizeof(line), f)) {
         if (strncmp(line, "Name:", 5) == 0) {
-            // ligne de type : "Name:\tbash"
-            sscanf(line, "Name:\t%255s", cmd);
+    // Secure format string depending on cmd_sz
+    char fmt[32];
+    snprintf(fmt, sizeof(fmt), "Name:\t%%%zus", cmd_sz - 1);
+     sscanf(line, fmt, cmd);
+}
         } else if (strncmp(line, "State:", 6) == 0) {
             // ligne de type : "State:\tS (sleeping)"
             sscanf(line, "State:\t%c", state);
