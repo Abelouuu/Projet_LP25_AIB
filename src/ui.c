@@ -106,7 +106,7 @@ void ui_loop_local(void) {
             if (p) pause_process(p->pid); 
         } else if (ch == 'r' || ch == 'R') {
             Process *p = get_nth_process(list, selected);
-            if (p) kill(p->pid, SIGCONT);
+            if (p) continue_process(p->pid);
         }
 
         free_processes(list);
