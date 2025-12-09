@@ -105,6 +105,7 @@ void traiter_options(int argc, char **argv, program_options *options){
 }
 
 
+
 void valider_options(program_options *options) {
     // -a necessite -c et -s
     if (options->all && (options->remote_config == NULL || options->remote_server == NULL)) {

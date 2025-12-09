@@ -16,7 +16,6 @@ static Process *get_nth_process(Process *head, int index) {
     return NULL;
 }
 
-
 void ui_init() {
     initscr();
     cbreak();
@@ -192,5 +191,3 @@ void ui_traite_event(int ch, int *selected, int count, int *running, Process *li
         }
     }
 }
-
->>>>>>> Basile
