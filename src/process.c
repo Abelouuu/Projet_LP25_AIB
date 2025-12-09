@@ -158,7 +158,7 @@ void update_mem_percentage(Process *head) {
         return;
     }
 
-    for (Process *p = head; p; p = p->next) {
+    for (Process *p = head; p; p = p->next) { // calcule de memoire par percentage
         p->mem_pct = (double)p->mem_kb * 100.0 / (double)total_kb;
     }
 }
