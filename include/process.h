@@ -28,6 +28,14 @@ Process *sort_by_mem(Process *head);
 void print_processes(Process *head, const char *machine_name);
 
 // Libère la mémoire allouée pour la liste des processus
-void libere_liste_processus(Process *processes, int count);
+void free_processes(Process *processes);
+
+int kill_process_soft(int pid);
+
+int kill_process_hard(int pid);
+
+int pause_process(int pid);
+
+int continue_process(int pid);
 
 #endif // PROCESS_H
