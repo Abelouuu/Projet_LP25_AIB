@@ -121,7 +121,16 @@ void affichePrinc(Process *list, int selected) {
     int idx = 0;
     int max_rows = LINES - 2;
 
-    for (Process *p = list; p && row < max_rows; p = p->next, row++, idx++) {
+    // création de l'effet de "scroll" lorsque l'utilisateur descent trop bas dans les processus
+    int decalage = 0;
+    if (selected >= max_rows - 8) {
+        decalage = selected - (max_rows - 8) + 1; // on fait défiler pour garder la sélection visible
+    }
+
+    for (Process *p = list; p && row < max_rows; p = p->next, idx++) {
+        if (idx < decalage) {
+            continue;
+        }
 
         if (idx == selected) {
             //Mettre en surbrillance
@@ -146,6 +155,8 @@ void affichePrinc(Process *list, int selected) {
             //Désactiver la surbrillance
             attroff(A_REVERSE);
         }
+
+        row++;
     }
 
     refresh();
