@@ -104,6 +104,24 @@ void traiter_options(int argc, char **argv, program_options *options){
     valider_options(options);
 }
 
+<<<<<<< HEAD
+=======
+void affiche_aide(const char *nom_programme) {
+    printf("Utilisation: %s [options]\n", nom_programme);
+    printf("Options:\n");
+    printf("  -h, --help                 Afficher cette aide\n");
+    printf("  --dry-run                  Test l'accès aux processus sans les afficher\n");
+    printf("  -c, --remote-config FILE   Spécifier le fichier de configuration distant\n");
+    printf("  -t, --connection-type TYPE Spécifier le type de connexion\n");
+    printf("  -P, --port PORT            Spécifier le port de connexion\n");
+    printf("  -l, --login LOGIN          Spécifier le login\n");
+    printf("  -s, --remote-server SERVER Spécifier le serveur distant\n");
+    printf("  -u, --username USERNAME    Spécifier le nom d'utilisateur\n");
+    printf("  -p, --password PASSWORD    Spécifier le mot de passe\n");
+    printf("  -a, --all                  Appliquer à tous les éléments\n");
+}
+
+>>>>>>> Abel
 void valider_options(program_options *options) {
     // -a necessite -c et -s
     if (options->all && (options->remote_config == NULL || options->remote_server == NULL)) {

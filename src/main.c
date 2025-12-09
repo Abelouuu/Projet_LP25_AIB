@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
     if(opts.remote_server) {
         ajouter_machine_utilisateur(&liste_machines, &nb_machines, opts.remote_server, opts.username, opts.password, opts.port, opts.connection_type);
     }
+
     //Liste de machine à fini d'être crée
     if(nb_machines==0){
         printf("aucune machine distantes. Lancée le programme en local");
