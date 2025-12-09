@@ -1,7 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "options.h"
 #include "network.h"
+#include "process.h"
+#include "ui.h"
 
 
 int main(int argc, char **argv) {
@@ -35,6 +38,8 @@ int main(int argc, char **argv) {
     if(opts.remote_server) {
         ajouter_machine_utilisateur(&liste_machines, &nb_machines, opts.remote_server, opts.username, opts.password, opts.port, opts.connection_type);
     }
+
+    //Liste de machine à fini d'être crée
     if(nb_machines==0){
         printf("aucune machine distantes. Lancée le programme en local");
     } else {
@@ -54,6 +59,9 @@ int main(int argc, char **argv) {
         free_machine_list(liste_machines, nb_machines);
     }
 
+    sleep(1);
+
+    ui_loop_local();
+
     return 0;
 }
-

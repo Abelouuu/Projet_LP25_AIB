@@ -11,7 +11,7 @@ OBJS := $(patsubst src/%.c,obj/%.o,$(SRCS))
 all: $(EXEC)
 # création de l'exécutable
 $(EXEC): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ -lncurses
 
 # création des fichiers objets
 obj/%.o: src/%.c
