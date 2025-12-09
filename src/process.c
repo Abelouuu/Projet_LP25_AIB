@@ -268,4 +268,8 @@ int pause_process(int pid) {
 int continue_process(int pid) {
     return send_signal_to_pid(pid, SIGCONT, "kill(SIGCONT)");
 }
+<<<<<<< HEAD
 /* Implémente les fonctionnalités de gestion de processus sur une machine linux */
+=======
+/* Implémente les fonctionnalités de gestion de processus sur une machine linux */
+>>>>>>> Basile
