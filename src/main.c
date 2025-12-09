@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "options.h"
 #include "network.h"
+#include "process.h"
+#include "ui.h"
 
 
 int main(int argc, char **argv) {
@@ -53,6 +55,8 @@ int main(int argc, char **argv) {
         // N'oublie pas de libérer la mémoire après
         free_machine_list(liste_machines, nb_machines);
     }
+
+    ui_loop_local();
 
     return 0;
 }
