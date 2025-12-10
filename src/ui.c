@@ -2,6 +2,7 @@
 #include "process.h"
 #include "network.h"
 #include <ncurses.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdio.h>
 
@@ -221,5 +222,21 @@ void ui_traite_event(int ch, int *selected, int count, int *running, Process *li
         // Revenir au mode normal
         noecho();
         curs_set(0);
+        if (query[0] != '\0') {
+            int idx = 0;
+            int found = -1;
+
+            for (Process *p = list; p; p = p->next, idx++) {
+                // On cherche dans le nom de commande ou le user
+                if (processus_recherche(p,query)==1) {
+                    found = idx;
+                    break;
+                }
+            }
+
+            if (found >= 0) {
+                *selected = found;  // déplacer la sélection sur le résultat
+            }
+        }
     }
 }

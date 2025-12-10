@@ -296,7 +296,6 @@ int continue_process(int pid) {
 
 // recherche un processus par PID ou par nom de commande
 int processus_recherche(const Process *p, const char *rech) {
-    int processus_recherche(const Process *p, const char *rech) {
     if (!p) return 0;
     if (!rech || !*rech) return 1;  // si recherche vide → tout afficher
 
@@ -308,6 +307,5 @@ int processus_recherche(const Process *p, const char *rech) {
     if (contient(pid_txt, rech)) return 1;
 
     return 0;
-}
 }
 

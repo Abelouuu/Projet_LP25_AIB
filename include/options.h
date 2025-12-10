@@ -33,8 +33,4 @@ void free_options(program_options *opt);
 
 void dry_run(program_options *options);
 
-<<<<<<< HEAD
 #endif
-=======
-#endif
->>>>>>> 332736e43b24e3bf92547d652e94fa2b9d82d5e5

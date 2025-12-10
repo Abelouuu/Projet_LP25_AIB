@@ -38,4 +38,9 @@ int pause_process(int pid);
 
 int continue_process(int pid);
 
-#endif /* PROCESS_H */
+// recherche un processus par PID ou par nom de commande
+
+int processus_recherche(const Process *p, const char *rech);
+
+
+#endif // PROCESS_H
