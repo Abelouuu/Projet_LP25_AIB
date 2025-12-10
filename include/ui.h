@@ -17,4 +17,7 @@ void ui_traite_event(int ch, int *selected, int count, int *running, Process *li
 /* Affichage de la fenêtre d'aide */
 void affiche_aide();
 
+/* Affichage de la fenêtre d'aide */
+void affiche_aide();
+
 #endif

@@ -2,6 +2,7 @@
 #include "process.h"
 #include "network.h"
 #include <ncurses.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdio.h>
 
@@ -108,7 +109,7 @@ void affichePrinc(Process *list, int selected) {
     // Ligne d'aide
     attron(COLOR_PAIR(4));
     mvprintw(5, 0,
-             "Aide : fleches = deplacer  |  q = quitter  |  k = kill (soft)  |  p = pause  |  r = reprise | h = aide");
+             "Aide : fleches = deplacer  |  q = quitter  |  k = kill (soft)  |  p = pause  |  r = reprise | h = aide | s = rechercher");
     attroff(COLOR_PAIR(4));
 
     // Titres des processus
@@ -199,6 +200,43 @@ void ui_traite_event(int ch, int *selected, int count, int *running, Process *li
         Process *p = get_nth_process(list, *selected);
         if (p) {
             continue_process(p->pid);
+        }
+    }
+    else if (ch == 's' || ch == 'S') {
+        char query[128] = {0};
+
+        int row = LINES - 1;   // dernière ligne de l'écran
+
+        // Activer l'écho et le curseur pour taper la recherche
+        echo();
+        curs_set(1);
+
+        // Afficher la barre de recherche
+        mvprintw(row, 0, "Recherche: ");
+        clrtoeol();                // effacer le reste de la ligne
+        move(row, 11);             // après "Recherche: "
+
+        // Lire au max 127 caractères
+        getnstr(query, sizeof(query) - 1);
+
+        // Revenir au mode normal
+        noecho();
+        curs_set(0);
+        if (query[0] != '\0') {
+            int idx = 0;
+            int found = -1;
+
+            for (Process *p = list; p; p = p->next, idx++) {
+                // On cherche dans le nom de commande ou le user
+                if (processus_recherche(p,query)==1) {
+                    found = idx;
+                    break;
+                }
+            }
+
+            if (found >= 0) {
+                *selected = found;  // déplacer la sélection sur le résultat
+            }
         }
     }
 }
