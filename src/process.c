@@ -295,7 +295,7 @@ int continue_process(int pid) {
 /* Implémente les fonctionnalités de gestion de processus sur une machine linux */
 
 // recherche un processus par PID ou par nom de commande
-int processus_recherche(const Process *p, const char *rech) {
+
     int processus_recherche(const Process *p, const char *rech) {
     if (!p) return 0;
     if (!rech || !*rech) return 1;  // si recherche vide → tout afficher
@@ -309,5 +309,5 @@ int processus_recherche(const Process *p, const char *rech) {
 
     return 0;
 }
-}
+
 
