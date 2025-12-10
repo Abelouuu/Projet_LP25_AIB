@@ -39,7 +39,6 @@ void traiter_options(int argc, char **argv, program_options *options){
         switch (opt) {
             case 'h':
                 options->help = true;
-                affiche_aide(argv[0]);
                 break;
             case 1:
                 options->dry_run = true;
@@ -105,43 +104,6 @@ void traiter_options(int argc, char **argv, program_options *options){
     valider_options(options);
 }
 
-#include <ncurses.h>
-
-void affiche_aide(const char *nom_programme) {
-    int height = 15;
-    int width  = 70;
-    int starty = (LINES - height) / 2;
-    int startx = (COLS  - width)  / 2;
-
-    if (starty < 0) starty = 0;
-    if (startx < 0) startx = 0;
-
-    WINDOW *win = newwin(height, width, starty, startx);
-    box(win, 0, 0);
-
-    // Titre
-    mvwprintw(win, 1, 2, "Utilisation : %s [options]", nom_programme ? nom_programme : "programme");
-    mvwprintw(win, 2, 2, "Options :");
-
-    // Contenu
-    mvwprintw(win, 4, 2, "  -h, --help                 Afficher cette aide");
-    mvwprintw(win, 5, 2, "  --dry-run                  Tester l'accès sans afficher");
-    mvwprintw(win, 6, 2, "  -c, --remote-config FILE   Fichier de configuration distant");
-    mvwprintw(win, 7, 2, "  -t, --connection-type TYPE Type de connexion");
-    mvwprintw(win, 8, 2, "  -P, --port PORT            Port de connexion");
-    mvwprintw(win, 9, 2, "  -l, --login LOGIN          Login");
-    mvwprintw(win,10, 2, "  -s, --remote-server SERVER Serveur distant");
-    mvwprintw(win,11, 2, "  -u, --username USERNAME    Nom d'utilisateur");
-    mvwprintw(win,12, 2, "  -p, --password PASSWORD    Mot de passe");
-    mvwprintw(win,13, 2, "  -a, --all                  Appliquer à tous les éléments");
-
-    // Footer
-    mvwprintw(win, height - 2, 2, "Appuyez sur une touche pour fermer cette aide...");
-
-    wrefresh(win);
-    wgetch(win);   // attend une touche dans la fenêtre d'aide
-    delwin(win);   // détruit la fenêtre
-}
 
 
 void valider_options(program_options *options) {

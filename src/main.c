@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <ncurses.h>
 #include "options.h"
 #include "network.h"
 #include "process.h"
@@ -38,6 +39,7 @@ int main(int argc, char **argv) {
     if(opts.remote_server) {
         ajouter_machine_utilisateur(&liste_machines, &nb_machines, opts.remote_server, opts.username, opts.password, opts.port, opts.connection_type);
     }
+
     //Liste de machine à fini d'être crée
     if(nb_machines==0){
         printf("aucune machine distantes. Lancée le programme en local");
@@ -57,10 +59,43 @@ int main(int argc, char **argv) {
         // N'oublie pas de libérer la mémoire après
         free_machine_list(liste_machines, nb_machines);
     }
+    sleep(0);
 
-    sleep(2);
+    sleep(0);
 
-    ui_loop_local(opts.help);
+    ui_init();
 
+    int running  = 1;
+    int selected = 0;
+
+    if (opts.help)
+    {
+        affiche_aide();
+    }
+    
+
+    while (running) {
+
+        Process *list = read_processes();
+        if (!list)
+            break;
+
+        update_mem_percentage(list);
+        list = sort_by_mem(list);
+
+        int count = 0;
+        for (Process *p = list; p; p = p->next)
+            count++;
+
+        affichePrinc(list, selected);
+
+        int ch = getch();
+        ui_traite_event(ch, &selected, count, &running, list);
+
+        free_processes(list);
+
+        usleep(150000);
+    }
+    ui_shutdown();
     return 0;
 }
