@@ -108,7 +108,11 @@ void affichePrinc(Process *list, int selected) {
     // Ligne d'aide
     attron(COLOR_PAIR(4));
     mvprintw(5, 0,
+<<<<<<< HEAD
              "Aide : fleches = deplacer  |  q = quitter  |  k = kill (soft)  |  p = pause  |  r = reprise | h = aide | s = rechercher");
+=======
+             "Aide : fleches = deplacer  |  q = quitter  |  k = kill (soft)  |  p = pause  |  r = reprise | h = aide");
+>>>>>>> 332736e43b24e3bf92547d652e94fa2b9d82d5e5
     attroff(COLOR_PAIR(4));
 
     // Titres des processus
@@ -201,6 +205,7 @@ void ui_traite_event(int ch, int *selected, int count, int *running, Process *li
             continue_process(p->pid);
         }
     }
+<<<<<<< HEAD
     else if (ch == 's' || ch == 'S') {
         char query[128] = {0};
 
@@ -223,3 +228,6 @@ void ui_traite_event(int ch, int *selected, int count, int *running, Process *li
         curs_set(0);
     }
 }
+=======
+}
+>>>>>>> 332736e43b24e3bf92547d652e94fa2b9d82d5e5
