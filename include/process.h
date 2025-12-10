@@ -27,15 +27,13 @@ Process *sort_by_mem(Process *head);
 // affiche les processus (limité à 50 lignes pour éviter le spam)
 void print_processes(Process *head, const char *machine_name);
 
-// Libère la mémoire allouée pour la liste des processus
-void free_processes(Process *processes);
+// libère toute la liste chaînée
+void free_processes(Process *head);
 
-int kill_process_soft(int pid);
+// controle des processus via signaux
+int kill_process_soft(int pid);   // SIGTERM (arrêt propre)
+int kill_process_hard(int pid);   // SIGKILL (arrêt forcé)
+int pause_process(int pid);       // SIGSTOP (pause)
+int continue_process(int pid);    // SIGCONT (reprendre)
 
-int kill_process_hard(int pid);
-
-int pause_process(int pid);
-
-int continue_process(int pid);
-
-#endif // PROCESS_H
+#endif /* PROCESS_H */
