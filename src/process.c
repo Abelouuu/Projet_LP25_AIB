@@ -22,6 +22,31 @@ static int is_number(const char *s) {
     return 1;
 }
 
+// recherche à la casse si une chaîne contient une autre
+static int contient(const char *txt, const char *rech) {
+    if (!txt || !rech || !*rech) return 0;
+
+    // Versions en minuscules
+    char c1, c2;
+    size_t len_txt = strlen(txt);
+    size_t len_rech = strlen(rech);
+
+    if (len_rech > len_txt) return 0;
+
+    for (size_t i = 0; i <= len_txt - len_rech; i++) {
+        size_t j = 0;
+        while (j < len_rech) {
+            c1 = (char)tolower((unsigned char)txt[i + j]);
+            c2 = (char)tolower((unsigned char)rech[j]);
+            if (c1 != c2) break;
+            j++;
+        }
+        if (j == len_rech) return 1; // trouvé
+    }
+    return 0;
+}
+
+
 // convertir un uid  en nom d'utilisateur
 static void uid_to_user(uid_t uid, char *buffer, size_t size) {
     struct passwd *pw = getpwuid(uid);
@@ -268,3 +293,19 @@ int continue_process(int pid) {
     return send_signal_to_pid(pid, SIGCONT, "kill(SIGCONT)");
 }
 /* Implémente les fonctionnalités de gestion de processus sur une machine linux */
+
+// recherche un processus par PID ou par nom de commande
+int processus_recherche(const Process *p, const char *rech) {
+    if (!p) return 0;
+    if (!rech || !*rech) return 1;  // si recherche vide → tout afficher
+
+    char pid_txt[16];
+    snprintf(pid_txt, sizeof(pid_txt), "%d", p->pid);
+
+    if (contient(p->cmd, rech)) return 1;
+    if (contient(p->user, rech)) return 1;
+    if (contient(pid_txt, rech)) return 1;
+
+    return 0;
+}
+
