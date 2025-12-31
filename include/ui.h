@@ -33,6 +33,4 @@ void ui_traite_event(int ch, int *selected, int count, int *running, Process *li
 void affiche_aide();
 
 void draw_search_bar();
-
-void afficher_erreur_connection(remote_machine *machine);
 #endif

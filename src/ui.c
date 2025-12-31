@@ -92,35 +92,6 @@ void affiche_aide() {
     delwin(win);
 }
 
-void afficher_erreur_connection(remote_machine *machine) {
-    int height = 10, width = 60;
-    int starty = (LINES - height) / 2;
-    int startx = (COLS - width) / 2;
-
-    WINDOW *win = newwin(height, width, starty, startx);
-    box(win, 0, 0);
-
-    char message[256];
-    snprintf(message, sizeof(message),
-             "Impossible de se connecter à '%s' (%s:%d)",
-             machine->name, machine->address, machine->port);
-
-    mvwprintw(win, 2, (width - strlen(message)) / 2, "%s", message);
-    mvwprintw(win, 4, 2, "Appuyez sur F2 pour passer à l'onglet suivant");
-    mvwprintw(win, 5, 2, "Appuyez sur F3 pour revenir à l'onglet précédent");
-
-    wrefresh(win);
-
-    int ch;
-    while ((ch = wgetch(win)) != KEY_F(2) && ch != KEY_F(3));
-    delwin(win);
-
-    touchwin(stdscr);
-    refresh();
-
-    // ici tu peux gérer current_page selon F2/F3
-}
-
 
 void affichePrinc(Process *list, int selected, remote_machine machine) {
     clear();
@@ -156,23 +127,23 @@ void affichePrinc(Process *list, int selected, remote_machine machine) {
     // Ligne d'aide
     attron(COLOR_PAIR(4));
     mvprintw(5, 0,
-             "Aide : fleches = deplacer  |  q = quitter  |  F2 = page précedentes  |  F3 = page suivante F4 = rechercher | F5 = pause | F6 = arreter | F7 = tuer | F8 = redémarrer");
+             "Aide : fleches = deplacer  |  q = quitter  | F1 = aides |  F2 = page précedentes  |  F3 = page suivante F4 = rechercher | F5 = pause | F6 = arreter | F7 = tuer | F8 = redémarrer");
     attroff(COLOR_PAIR(4));
 
     // Titres des processus
     attron(COLOR_PAIR(5));
-    mvprintw(7, 0, "%s\t%s\t%s\t%s\t%s",
+    mvprintw(9, 0, "%s\t%s\t%s\t%s\t%s",
              "PID", "USER", "MEM(%)", "ST", "CMD");
     attroff(COLOR_PAIR(5));
 
     if (list == NULL)
     {
-        mvprintw(9, 0, "Erreur de connexion à la machine distante ou aucun processus récupéré.");
+        mvprintw(10, 0, "Erreur de connexion à la machine distante ou aucun processus récupéré.");
         refresh();
         return;
     } 
     else {
-        int row = 9;
+        int row = 10;
         int idx = 0;
         int max_rows = LINES - 2;
 
