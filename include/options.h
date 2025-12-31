@@ -2,6 +2,7 @@
 #define OPTIONS_H
 
 #include <stdbool.h>
+#include "global.h"
 
 // Structure pour contenir les options du programme
 typedef struct{
