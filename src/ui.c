@@ -5,6 +5,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <ctype.h>
+
+ui_state_t ui_state;
 
 /* Récupérer le i-ème processus */
 static Process *get_nth_process(Process *head, int index) {
@@ -17,12 +20,30 @@ static Process *get_nth_process(Process *head, int index) {
     return NULL;
 }
 
+void handle_resize() {
+    endwin();
+    refresh();
+    clear();
+    refresh();
+}
+
 void ui_init() {
+    printf("connection...");
     initscr();
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
     curs_set(0);
+    timeout(150);//permet de ne pas bloquer l'attente d'une entrée utilisateur (getch)
+    start_color();
+    use_default_colors(); // pour pouvoir utiliser le fond par défaut du terminal
+
+    // Définition des paires de couleurs
+    init_pair(1, COLOR_CYAN, -1);    // titre
+    init_pair(2, COLOR_YELLOW, -1);  // noms de colonnes
+    init_pair(3, COLOR_GREEN, -1);   // première machine
+    init_pair(4, COLOR_MAGENTA, -1); // ligne d'aide
+    init_pair(5, COLOR_BLUE, -1);    // titres processus
 }
 
 void ui_shutdown() {
@@ -45,6 +66,9 @@ void affiche_aide() {
     }
 
     WINDOW *win = newwin(height, width, starty, startx);
+    if (!win) {
+        return;
+    }
     box(win, 0, 0);
 
     mvwprintw(win, 1, 2, "Utilisation : ./GestionRessources [options]");
@@ -69,23 +93,12 @@ void affiche_aide() {
 }
 
 
-void affichePrinc(Process *list, int selected) {
-
+void affichePrinc(Process *list, int selected, remote_machine machine) {
     clear();
-
-    start_color();
-    use_default_colors(); // pour pouvoir utiliser le fond par défaut du terminal
-
-    // Définition des paires de couleurs
-    init_pair(1, COLOR_CYAN, -1);    // titre
-    init_pair(2, COLOR_YELLOW, -1);  // noms de colonnes
-    init_pair(3, COLOR_GREEN, -1);   // première machine
-    init_pair(4, COLOR_MAGENTA, -1); // ligne d'aide
-    init_pair(5, COLOR_BLUE, -1);    // titres processus
 
     // Titre
     attron(COLOR_PAIR(1));
-    mvprintw(0, 0, "LP25 mini-htop (local)");
+    mvprintw(0, 0, "LP25 mini-htop Page :%d/%d", current_page + 1, nb_machines);
     attroff(COLOR_PAIR(1));
 
     // En-tête tableau
@@ -97,75 +110,149 @@ void affichePrinc(Process *list, int selected) {
 
     // Première ligne de données
     attron(COLOR_PAIR(3));
-    mvprintw(3, 0,
+    if(strcmp(machine.name,"Localhost")==0){
+        mvprintw(3, 0,
+             "Machine Locale ");
+    } else {
+        mvprintw(3, 0,
              "%-15s | %-15s | %-6d | %-18s | %-15s",
-             "machine",
-             "127.37681.23",
-             22,
-             "Abel",
-             "ssh");
+             machine.name,
+             machine.address,
+             machine.port,
+             machine.username,
+             machine.conn_type);
+    }
     attroff(COLOR_PAIR(3));
 
     // Ligne d'aide
     attron(COLOR_PAIR(4));
     mvprintw(5, 0,
-             "Aide : fleches = deplacer  |  q = quitter  |  k = kill (soft)  |  p = pause  |  r = reprise | h = aide | s = rechercher");
+             "Aide : fleches = deplacer  |  q = quitter  | F1 = aides |  F2 = page précedentes  |  F3 = page suivante F4 = rechercher | F5 = pause | F6 = arreter | F7 = tuer | F8 = redémarrer");
     attroff(COLOR_PAIR(4));
 
     // Titres des processus
     attron(COLOR_PAIR(5));
-    mvprintw(7, 0, "%s\t%s\t%s\t%s\t%s",
+    mvprintw(9, 0, "%s\t%s\t%s\t%s\t%s",
              "PID", "USER", "MEM(%)", "ST", "CMD");
     attroff(COLOR_PAIR(5));
 
-    int row = 8;
-    int idx = 0;
-    int max_rows = LINES - 2;
+    if (list == NULL)
+    {
+        mvprintw(10, 0, "Erreur de connexion à la machine distante ou aucun processus récupéré.");
+        refresh();
+        return;
+    } 
+    else {
+        int row = 10;
+        int idx = 0;
+        int max_rows = LINES - 2;
 
-    // création de l'effet de "scroll" lorsque l'utilisateur descent trop bas dans les processus
-    int decalage = 0;
-    if (selected >= max_rows - 8) {
-        decalage = selected - (max_rows - 8) + 1; // on fait défiler pour garder la sélection visible
+        // création de l'effet de "scroll" lorsque l'utilisateur descent trop bas dans les processus
+        int decalage = 0;
+        if (selected >= max_rows - 8) {
+            decalage = selected - (max_rows - 8) + 1; // on fait défiler pour garder la sélection visible
+        }
+
+        for (Process *p = list; p && row < max_rows; p = p->next, idx++) {
+            if (idx < decalage) {
+                continue;
+            }
+
+            if (idx == selected) {
+                //Mettre en surbrillance
+                attron(A_REVERSE);
+            }
+
+            int max_cmd_len = COLS - 40;
+            if (max_cmd_len < 0) {
+                max_cmd_len = 0;
+            }
+
+            if (max_cmd_len > 0) {
+                mvprintw(row, 0, "%d\t%s\t%2.2f\t%c\t%.*s",
+                        p->pid, p->user, p->mem_pct, p->state,
+                        max_cmd_len, p->cmd);
+            } else {
+                mvprintw(row, 0, "%d\t%s\t%2.2f\t%c\t",
+                        p->pid, p->user, p->mem_pct, p->state);
+            }
+
+            if (idx == selected) {
+                //Désactiver la surbrillance
+                attroff(A_REVERSE);
+            }
+
+            row++;
+        }
+
+        refresh();
+
+        if (ui_state.mode == MODE_RECHERCHE) {
+            draw_search_bar();
+        }
     }
-
-    for (Process *p = list; p && row < max_rows; p = p->next, idx++) {
-        if (idx < decalage) {
-            continue;
-        }
-
-        if (idx == selected) {
-            //Mettre en surbrillance
-            attron(A_REVERSE);
-        }
-
-        int max_cmd_len = COLS - 40;
-        if (max_cmd_len < 0) {
-            max_cmd_len = 0;
-        }
-
-        if (max_cmd_len > 0) {
-            mvprintw(row, 0, "%d\t%s\t%2.2f\t%c\t%.*s",
-                     p->pid, p->user, p->mem_pct, p->state,
-                     max_cmd_len, p->cmd);
-        } else {
-            mvprintw(row, 0, "%d\t%s\t%2.2f\t%c\t",
-                     p->pid, p->user, p->mem_pct, p->state);
-        }
-
-        if (idx == selected) {
-            //Désactiver la surbrillance
-            attroff(A_REVERSE);
-        }
-
-        row++;
-    }
-
-    refresh();
 }
 
 
-void ui_traite_event(int ch, int *selected, int count, int *running, Process *list) {
+void ui_traite_event(int ch, int *selected, int nbproc, int *running, Process *list) {
 
+    // Verifie d'abord si il s'agit d'une commande de changement de mode
+    if (ch == KEY_F(4)) {
+        if(ui_state.mode == MODE_RECHERCHE) {
+            // quitter le mode recherche
+            ui_state.mode = MODE_NORMAL;
+            ui_state.search_query[0] = '\0';
+            noecho();
+            curs_set(0);
+        } else {
+            // entrer en mode recherche
+            ui_state.mode = MODE_RECHERCHE;
+            ui_state.search_query[0] = '\0';
+            draw_search_bar();
+        }
+    }
+
+    // MODE RECHERCHE
+    if (ui_state.mode == MODE_RECHERCHE) {
+        if (ch == '\n') {
+            /* lancer la recherche */
+            ui_state.mode = MODE_NORMAL;
+
+            noecho();
+            curs_set(0);
+            if(ui_state.search_query[0] != '\0') {
+                int idx = 0;
+                int found = -1;
+                for(Process *p = list;p;p = p->next, idx++) {
+                    if(processus_recherche(p,ui_state.search_query) == 1) {
+                        found = idx;
+                        break;
+                    }
+                }
+                if(found >=0) {
+                    *selected = found;
+                }
+            }
+        } else if (ch == 27) { // ESC
+            ui_state.mode = MODE_NORMAL;
+            noecho();
+            curs_set(0);
+        } else if (ch == KEY_BACKSPACE || ch == 127) {
+            size_t len = strlen(ui_state.search_query);
+            if (len > 0)
+                ui_state.search_query[len - 1] = '\0';
+        } else if (isprint(ch)) {
+            size_t len = strlen(ui_state.search_query);
+            if (len < sizeof(ui_state.search_query) - 1) {
+                ui_state.search_query[len] = ch;
+                ui_state.search_query[len + 1] = '\0';
+            }
+        }
+        return;
+    }
+
+
+    // MODE NORMAL
     if (ch == KEY_UP) {
         (*selected)--;
         if (*selected < 0) {
@@ -174,69 +261,110 @@ void ui_traite_event(int ch, int *selected, int count, int *running, Process *li
     }
     else if (ch == KEY_DOWN) {
         (*selected)++;
-        if (*selected >= count) {
-            *selected = count - 1;
+        if (*selected >= nbproc) {
+            *selected = nbproc - 1;
         }
     }
     else if (ch == 'q' || ch == 'Q') {
         *running = 0;
     }
-    else if (ch == 'h' || ch == 'H') {
+    else if (ch == KEY_F(1)) {
         affiche_aide();
     }
-    else if ((ch == 'k' || ch == 'K') && count > 0) {
-        Process *p = get_nth_process(list, *selected);
-        if (p) {
-            kill_process_soft(p->pid);
-        } 
+
+    //page précedentes
+    else if (ch == KEY_F(2)) {
+        if(current_page>0) {
+            //déconnecter de ssh si c'était une connection ssh
+            if(liste_machines[current_page].port==22 && current_ssh_session) {
+                ssh_disconnect(current_ssh_session);
+                ssh_free(current_ssh_session);
+            } 
+            //déconnecter de telnet si c'était une connection telnet
+            else if(liste_machines[current_page].port==23 && current_telnet_session != -1){
+                close(current_telnet_session);
+                current_telnet_session = -1;
+            }
+
+            // revenir à la page précédente
+            current_page--;
+
+            if(current_page != 0){
+                //si la nouvelle page correspond à une connection ssh
+                if(liste_machines[current_page].port==22) {
+                    current_ssh_session = connection_ssh(&liste_machines[current_page]);
+                } else if(liste_machines[current_page].port==23){
+                    //sinon c'est une connection telnet
+                    current_telnet_session = connection_telnet(&liste_machines[current_page]);
+                }
+                
+            }
+        }
     }
-    else if (ch == 'p' || ch == 'P') {
+
+    //page suivante
+    else if (ch == KEY_F(3)) {
+        if(current_page<nb_machines-1) {
+    
+            if(liste_machines[current_page].port==22) {
+                if(current_ssh_session) {
+                    ssh_disconnect(current_ssh_session);
+                    ssh_free(current_ssh_session);
+                }
+            } 
+            else if(liste_machines[current_page].port==23 && current_telnet_session != -1){
+                close(current_telnet_session);
+                current_telnet_session = -1;
+            }
+
+            current_page++;
+            
+            if(liste_machines[current_page].port==22) {
+                current_ssh_session = connection_ssh(&liste_machines[current_page]);
+            }
+            else if(liste_machines[current_page].port==23){
+                current_telnet_session = connection_telnet(&liste_machines[current_page]);
+            }
+        }
+    }
+
+    //mettre en pause le processus sélectionné
+    else if (ch == KEY_F(5)) {
         Process *p = get_nth_process(list, *selected);
         if (p) {
             pause_process(p->pid);
         }
     }
-    else if (ch == 'r' || ch == 'R') {
+    // arreter le processus sélectionné
+    else if ((ch == KEY_F(6)) && nbproc > 0) {
+        Process *p = get_nth_process(list, *selected);
+        if (p) {
+            kill_process_soft(p->pid);
+        } 
+    }
+    // tuer le processus sélectionné
+    else if ((ch == KEY_F(7)) && nbproc > 0) {
+        Process *p = get_nth_process(list, *selected);
+        if (p) {
+            kill_process_hard(p->pid);
+        } 
+    }
+    // redémarrer le processus sélectionné
+    else if (ch == KEY_F(8)) {
         Process *p = get_nth_process(list, *selected);
         if (p) {
             continue_process(p->pid);
         }
     }
-    else if (ch == 's' || ch == 'S') {
-        char query[128] = {0};
+}
 
-        int row = LINES - 1;   // dernière ligne de l'écran
+void draw_search_bar() {
+    int row = LINES - 1;
 
-        // Activer l'écho et le curseur pour taper la recherche
-        echo();
-        curs_set(1);
+    echo();
+    curs_set(1);
 
-        // Afficher la barre de recherche
-        mvprintw(row, 0, "Recherche: ");
-        clrtoeol();                // effacer le reste de la ligne
-        move(row, 11);             // après "Recherche: "
-
-        // Lire au max 127 caractères
-        getnstr(query, sizeof(query) - 1);
-
-        // Revenir au mode normal
-        noecho();
-        curs_set(0);
-        if (query[0] != '\0') {
-            int idx = 0;
-            int found = -1;
-
-            for (Process *p = list; p; p = p->next, idx++) {
-                // On cherche dans le nom de commande ou le user
-                if (processus_recherche(p,query)==1) {
-                    found = idx;
-                    break;
-                }
-            }
-
-            if (found >= 0) {
-                *selected = found;  // déplacer la sélection sur le résultat
-            }
-        }
-    }
+    mvprintw(row, 0, "Recherche: %s", ui_state.search_query);
+    clrtoeol();
+    move(row, 11 + strlen(ui_state.search_query));
 }

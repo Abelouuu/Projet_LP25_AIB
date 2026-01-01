@@ -108,8 +108,8 @@ void traiter_options(int argc, char **argv, program_options *options){
 
 void valider_options(program_options *options) {
     // -a necessite -c et -s
-    if (options->all && (options->remote_config == NULL || options->remote_server == NULL)) {
-        printf("L'option --all nécessite que --connection-type et --remote-server soient spécifiés.\n");
+    if (options->all && options->remote_config == NULL && options->remote_server == NULL) {
+        printf("L'option --all nécessite que --remote-config ou --remote-server soient spécifiés.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -172,12 +172,12 @@ void valider_options(program_options *options) {
     //si -s est rentré, alors -u et -p doivent contenir une valeur
     if (options->remote_server) {
         if(!options->username){
-            printf("username de la machine %s: ", options->remote_server);
+            printf("username de la machine %s: ", options->username);
             options->username = malloc(100);
             scanf("%99s", options->username);
         }
         if(!options->password) {
-            printf("password de la machine %s: ", options->remote_server);
+            printf("password de la machine %s: ", options->username);
             options->password = malloc(100);
             scanf("%99s", options->password);
         }

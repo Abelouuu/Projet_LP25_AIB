@@ -2,100 +2,98 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <ncurses.h>
+#include <string.h>
 #include "options.h"
 #include "network.h"
 #include "process.h"
 #include "ui.h"
+#include "global.h"
+#include <signal.h>
 
+// Définition des variables globales
+int nb_machines = 0;
+remote_machine *liste_machines = NULL;
+int current_page = 0;
+int current_telnet_session = -1;
+ssh_session current_ssh_session = NULL;
 
 int main(int argc, char **argv) {
     program_options opts;
     initialiser_options(&opts);
     traiter_options(argc, argv, &opts);
 
-    printf("\nOptions traitées avec succès.\n");
-    printf("\n======= Options =======\n");
-    printf("help: %s\n", opts.help ? "true" : "false");
-    printf("dry Run: %s\n", opts.dry_run ? "true" : "false");
-    printf("remote-c onfig: %s\n", opts.remote_config ? opts.remote_config : "NULL");
-    printf("connection-type: %s\n", opts.connection_type ? opts.connection_type : "NULL");
-    printf("port: %d\n", opts.port);
-    printf("login: %s\n", opts.login ? opts.login : "NULL");
-    printf("remote-server: %s\n", opts.remote_server ? opts.remote_server : "NULL");
-    printf("username: %s\n", opts.username ? opts.username : "NULL");
-    printf("password: %s\n", opts.password ? opts.password : "NULL");
-    printf("all: %s\n", opts.all ? "true" : "false");
-    printf("=======================\n");
-
-    
     //==========================création de la liste des machines distantes============================//
-    int nb_machines = 0;
-    remote_machine *liste_machines = NULL;
-    if (opts.remote_config) {
-        lire_config(opts.remote_config, &liste_machines, &nb_machines);
+    nb_machines = 0;
+    if(opts.all || (!opts.remote_config && !opts.remote_server)){
+        ajouter_machine_local();
+    }
 
-        printf("\n========Liste des machines=======\n\n");
+    if (opts.remote_config) {
+        lire_config(opts.remote_config);
     } 
     if(opts.remote_server) {
-        ajouter_machine_utilisateur(&liste_machines, &nb_machines, opts.remote_server, opts.username, opts.password, opts.port, opts.connection_type);
+        ajouter_machine_utilisateur(opts.remote_server, opts.username, opts.password, opts.port, opts.connection_type);
     }
 
-    //Liste de machine à fini d'être crée
-    if(nb_machines==0){
-        printf("aucune machine distantes. Lancée le programme en local");
+    if(liste_machines[0].port == 22){
+        current_ssh_session = connection_ssh(&liste_machines[0]);
     } else {
-        //==========================création de la liste des machines distantes============================//
-        for (int i = 0; i < nb_machines; i++)
-            {
-                printf("Machine %d \n", i);
-                printf("nom: \t\t %s \n", liste_machines[i].name);
-                printf("adresse: \t %s \n", liste_machines[i].address);
-                printf("username: \t %s \n", liste_machines[i].username);
-                printf("password: \t %s \n", liste_machines[i].password);
-                printf("type connection: \t %s \n", liste_machines[i].conn_type);
-                printf("port: \t %d \n\n", liste_machines[i].port);
-            }
-
-        // N'oublie pas de libérer la mémoire après
-        free_machine_list(liste_machines, nb_machines);
+        current_telnet_session = connection_telnet(&liste_machines[0]);
     }
-    sleep(0);
 
-    sleep(0);
-
+    //==========================Début de la boucle d'affichage============================//
     ui_init();
 
-    int running  = 1;
+    signal(SIGWINCH, handle_resize);
+    int running = 1;
     int selected = 0;
 
-    if (opts.help)
-    {
+    if (opts.help) {
         affiche_aide();
     }
-    
 
     while (running) {
+        Process *listproc = NULL;
+        int nbproc = 0;
+        remote_machine current_machine = liste_machines[current_page];
+        /* Lecture des processus selon la page */
 
-        Process *list = read_processes();
-        if (!list)
+        //on initialise comme si la première page n'étais pas une machine distante
+        if (current_page == 0 && strcmp(liste_machines[0].name,"Localhost") == 0) {
+            listproc = read_proc(-1, NULL);
+        } else if (current_ssh_session) {
+            listproc = read_proc(-1, current_ssh_session);
+        } else if (current_telnet_session != -1) {
+            listproc = read_proc(current_telnet_session, NULL);
+        }
+
+        /* Si liste vide ou erreur, affiche page vide */
+        if (!listproc && current_page != 0 && strcmp(liste_machines[0].name,"LocalHost")!=0) {
+            //erreur de connection
+            affichePrinc(NULL, selected, current_machine);
+        } else if (!listproc) {
+            //bug dans la récupération locale
             break;
+        } else {
+            update_mem_percentage(listproc);
+            listproc = sort_by_mem(listproc);
 
-        update_mem_percentage(list);
-        list = sort_by_mem(list);
+            for (Process *p = listproc; p != NULL; p = p->next) {
+                nbproc++;
+            }
 
-        int count = 0;
-        for (Process *p = list; p; p = p->next)
-            count++;
-
-        affichePrinc(list, selected);
+            affichePrinc(listproc, selected, current_machine);
+        }
 
         int ch = getch();
-        ui_traite_event(ch, &selected, count, &running, list);
+        ui_traite_event(ch, &selected, nbproc, &running, listproc);
 
-        free_processes(list);
+        free_processes(listproc);
 
         usleep(150000);
     }
+
     ui_shutdown();
+    free_machine_list();
     return 0;
 }

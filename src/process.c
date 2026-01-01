@@ -1,124 +1,94 @@
 #define _GNU_SOURCE
 #include "process.h"
+#include "global.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
 #include <ctype.h>
 #include <unistd.h>
-#include <pwd.h>
 #include <signal.h>
 
+// Lecture des processus
+Process *read_proc(int sockfd, ssh_session session) {
+    char output[65536];
+    char *line;
+    Process *head = NULL;
+    Process *tail = NULL;
 
-
-// vérifier si une chaîne est entièrement numérique (pour les PID)
-static int is_number(const char *s) {
-    if (!s || !*s) return 0;
-    while (*s) {
-        if (!isdigit((unsigned char)*s)) return 0;
-        s++;
-    }
-    return 1;
-}
-
-// recherche à la casse si une chaîne contient une autre
-static int contient(const char *txt, const char *rech) {
-    if (!txt || !rech || !*rech) return 0;
-
-    // Versions en minuscules
-    char c1, c2;
-    size_t len_txt = strlen(txt);
-    size_t len_rech = strlen(rech);
-
-    if (len_rech > len_txt) return 0;
-
-    for (size_t i = 0; i <= len_txt - len_rech; i++) {
-        size_t j = 0;
-        while (j < len_rech) {
-            c1 = (char)tolower((unsigned char)txt[i + j]);
-            c2 = (char)tolower((unsigned char)rech[j]);
-            if (c1 != c2) break;
-            j++;
+    if (sockfd >= 0) {
+        /* lecture via Telnet */
+        if (telnet_exec(sockfd,
+                     "ps -eo pid,user,rss,pmem,state,comm --no-headers\n",
+                     output) != 0) {
+            return NULL;
         }
-        if (j == len_rech) return 1; // trouvé
-    }
-    return 0;
-}
 
-
-// convertir un uid  en nom d'utilisateur
-static void uid_to_user(uid_t uid, char *buffer, size_t size) {
-    struct passwd *pw = getpwuid(uid);
-    if (pw && pw->pw_name) {
-        strncpy(buffer, pw->pw_name, size);
-        buffer[size - 1] = '\0';
+    } else if (session) {
+        /* lecture via SSH */
+        if (ssh_exec(session,
+                     "ps -eo pid,user,rss,pmem,state,comm --no-headers",
+                     output,
+                     sizeof(output)) != 0) {
+            return NULL;
+        }
     } else {
-        snprintf(buffer, size, "%d", (int)uid);
-    }
-}
-
-// lire /proc/[pid]/status pour récupérer : Name, State, VmRSS, Uid
-// lire /proc/[pid]/status pour récupérer : Name, State, VmRSS, Uid
-static int read_status(int pid,
-                       char *state,
-                       long *mem_kb,
-                       char *cmd,
-                       size_t cmd_sz,
-                       char *user,
-                       size_t user_sz)
-{
-    char path[64];
-    snprintf(path, sizeof(path), "/proc/%d/status", pid);
-    FILE *f = fopen(path, "r");
-    if (!f) return -1;
-
-    char line[512];
-    *mem_kb = 0;
-    *state = '?';
-    cmd[0] = '\0';
-    uid_t uid = 0;
-
-    while (fgets(line, sizeof(line), f)) {
-
-        if (strncmp(line, "Name:", 5) == 0) {
-           
-            if (cmd && cmd_sz > 1) {
-                char fmt[32];
-                snprintf(fmt, sizeof(fmt), "Name:\t%%%zus", cmd_sz - 1);
-                if (sscanf(line, fmt, cmd) != 1) {
-                    cmd[0] = '\0';
-                }
-            }
-
-        } else if (strncmp(line, "State:", 6) == 0) {
-            // ligne de type : "State:\tS (sleeping)"
-            sscanf(line, "State:\t%c", state);
-
-        } else if (strncmp(line, "VmRSS:", 6) == 0) {
-            // ligne de type : "VmRSS:\t  12345 kB"
-            if (sscanf(line, "VmRSS: %ld kB", mem_kb) != 1) {
-                *mem_kb = 0;
-            }
-
-        } else if (strncmp(line, "Uid:", 4) == 0) {
-            // ligne de type : "Uid:\t1000\t1000\t1000\t1000"
-            if (sscanf(line, "Uid: %u", &uid) != 1) {
-                uid = 0;
-            }
+        /* lecture locale */
+        FILE *fp = popen("ps -eo pid,user,rss,pmem,state,comm --no-headers", "r");
+        if (!fp) {
+            return NULL;
         }
+
+        size_t len = 0;
+        output[0] = '\0';
+        while (fgets(output + len, sizeof(output) - len, fp)) {
+            len = strlen(output);
+            if (len >= sizeof(output) - 1) break;
+        }
+        pclose(fp);
     }
 
-    fclose(f);
-    uid_to_user(uid, user, user_sz);
-    return 0;
-}
+    /* parsing ligne par ligne */
+    line = strtok(output, "\n");
+    while (line) {
+        Process *proc = malloc(sizeof(Process));
+        if (!proc) {
+            while (head) {
+                Process *tmp = head;
+                head = head->next;
+                free(tmp);
+            }
+            return NULL;
+        }
 
+        memset(proc, 0, sizeof(Process));
 
-// insérer un Process au début de la liste
-static Process *push_front(Process *head, Process *p) {
-    p->next = head;
-    return p;
+        if (sscanf(line,
+           "%d %31s %ld %lf %c %255s",
+           &proc->pid,
+           proc->user,
+           &proc->mem_kb,
+           &proc->mem_pct,
+           &proc->state,
+           proc->cmd) != 6) {
+            free(proc);
+            line = strtok(NULL, "\n");
+            continue;
+        }
+
+        proc->next = NULL;
+        if (!head) {
+            head = proc;
+            tail = proc;
+        } else {
+            tail->next = proc;
+            tail = proc;
+        }
+
+        line = strtok(NULL, "\n");
+    }
+
+    return head;
 }
 
 // lire MemTotal (RAM totale) depuis /proc/meminfo, en kB
@@ -144,51 +114,7 @@ static long get_total_mem_kb(void) {
     return mem_total;
 }
 
-
-// Lecture des processus
-
-Process *read_processes(void) {
-    DIR *d = opendir("/proc");
-    if (!d) {
-        perror("opendir /proc");
-        return NULL;
-    }
-
-    Process *head = NULL;
-    struct dirent *ent;
-
-    while ((ent = readdir(d)) != NULL) {
-        if (!is_number(ent->d_name))
-            continue;
-
-        int pid = atoi(ent->d_name);
-
-        Process *p = calloc(1, sizeof(Process));
-        if (!p) continue;
-
-        p->pid = pid;
-
-        if (read_status(pid, &p->state, &p->mem_kb,
-                        p->cmd, sizeof(p->cmd),
-                        p->user, sizeof(p->user)) != 0)
-        {
-            free(p);
-            continue;
-        }
-
-        // %MEM sera calculé plus tard par update_mem_percentage()
-        p->mem_pct = 0.0;
-
-        head = push_front(head, p);
-    }
-
-    closedir(d);
-    return head;
-}
-
-
 // calcul du pourcentage de mémoire (%MEM)
-
 void update_mem_percentage(Process *head) {
     long total_kb = get_total_mem_kb();
     if (total_kb <= 0) {
@@ -204,59 +130,34 @@ void update_mem_percentage(Process *head) {
     }
 }
 
-
 // tri par %MEM décroissant
-
 Process *sort_by_mem(Process *head) {
     Process *sorted = NULL;
 
     while (head) {
-        Process *next = head->next;
+        Process *current = head;
+        head = head->next;
 
-        if (!sorted || head->mem_pct > sorted->mem_pct) {
-            head->next = sorted;
-            sorted = head;
+        /* insertion en tête */
+        if (!sorted || current->mem_pct > sorted->mem_pct) {
+            current->next = sorted;
+            sorted = current;
         } else {
-            Process *cur = sorted;
-            while (cur->next && cur->next->mem_pct >= head->mem_pct)
-                cur = cur->next;
+            Process *p = sorted;
 
-            head->next = cur->next;
-            cur->next = head;
+            while (p->next && p->next->mem_pct >= current->mem_pct) {
+                p = p->next;
+            }
+
+            current->next = p->next;
+            p->next = current;
         }
-
-        head = next;
     }
 
     return sorted;
 }
 
-
-// affichage texte simple (pour débogage)
-
-void print_processes(Process *head, const char *machine_name) {
-    if (!machine_name) machine_name = "local";
-
-    printf("=== Process list from [%s] ===\n", machine_name);
-    printf("%-7s %-12s %-7s %-4s %-s\n",
-           "PID", "USER", "%MEM", "ST", "CMD");
-    printf("-----------------------------------------------------------\n");
-
-    int count = 0;
-    for (Process *p = head; p; p = p->next) {
-        printf("%-7d %-12s %6.2f %-4c %-s\n",
-               p->pid, p->user, p->mem_pct, p->state, p->cmd);
-
-        if (++count == 50) {
-            printf("... (truncated)\n");
-            break;
-        }
-    }
-}
-
-
 // libération mémoire
-
 void free_processes(Process *head) {
     while (head) {
         Process *tmp = head;
@@ -264,8 +165,20 @@ void free_processes(Process *head) {
         free(tmp);
     }
 }
-// envoi de signal à un processus donné
+
+// envoi de signal à un processus donné (gere local ou distant via SSH et Telnet)
 static int send_signal_to_pid(int pid, int sig, const char *action_name) {
+
+    if(liste_machines[current_page].port==22 && current_ssh_session) {
+        if(send_signal_ssh(current_ssh_session, pid, sig) == -1){
+            perror(action_name);
+            return -1;
+        }
+        else {
+            return 0;
+        }
+    }
+
     if (kill(pid, sig) == -1) {
         perror(action_name);
         return -1;
@@ -292,7 +205,31 @@ int pause_process(int pid) {
 int continue_process(int pid) {
     return send_signal_to_pid(pid, SIGCONT, "kill(SIGCONT)");
 }
-/* Implémente les fonctionnalités de gestion de processus sur une machine linux */
+
+
+// recherche à la casse si une chaîne contient une autre
+static int contient(const char *txt, const char *rech) {
+    if (!txt || !rech || !*rech) return 0;
+
+    // Versions en minuscules
+    char c1, c2;
+    size_t len_txt = strlen(txt);
+    size_t len_rech = strlen(rech);
+
+    if (len_rech > len_txt) return 0;
+
+    for (size_t i = 0; i <= len_txt - len_rech; i++) {
+        size_t j = 0;
+        while (j < len_rech) {
+            c1 = (char)tolower((unsigned char)txt[i + j]);
+            c2 = (char)tolower((unsigned char)rech[j]);
+            if (c1 != c2) break;
+            j++;
+        }
+        if (j == len_rech) return 1; // trouvé
+    }
+    return 0;
+}
 
 // recherche un processus par PID ou par nom de commande
 int processus_recherche(const Process *p, const char *rech) {
@@ -308,4 +245,3 @@ int processus_recherche(const Process *p, const char *rech) {
 
     return 0;
 }
-
