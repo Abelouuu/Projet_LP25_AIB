@@ -62,7 +62,6 @@ void ajouter_machine(remote_machine machine){
     }
     liste_machines[nb_machines] = machine;
     nb_machines++;
-    printf("Machine locale ajoutée. %d\n", nb_machines);
 }
 
 // Créer la machine a partir des données entrée par l'utilisateur et l'ajoute à la liste des machines
@@ -81,19 +80,19 @@ void ajouter_machine_utilisateur(char *address, char *username, char *password, 
 }
 
 // ajouter la machine local (cet ajout sert essentiellement de repère pour les indices. Ex: liste_machine[1] => première machine distante)
-void ajouter_machine_local() {
+void ajouter_machine_local(void) {
     remote_machine machine;
-    
-    machine.name = strdup("Localhost");
-    machine.address = "";
-    machine.port = 0;
-    machine.username = "localuser";
-    machine.password = "";
-    machine.conn_type = "";
 
-    //Ajouter la machine a la liste
+    machine.name = strdup("Localhost");
+    machine.address = strdup("127.0.0.1");
+    machine.port = 0;
+    machine.username = strdup("localuser");
+    machine.password = strdup("");
+    machine.conn_type = strdup("local");
+
     ajouter_machine(machine);
 }
+
 
 //libérer l'espace des machines
 void free_machine_list(){

@@ -110,18 +110,13 @@ void affichePrinc(Process *list, int selected, remote_machine machine) {
 
     // Première ligne de données
     attron(COLOR_PAIR(3));
-    if(strcmp(machine.name,"Localhost")==0){
-        mvprintw(3, 0,
-             "Machine Locale ");
-    } else {
-        mvprintw(3, 0,
-             "%-15s | %-15s | %-6d | %-18s | %-15s",
-             machine.name,
-             machine.address,
-             machine.port,
-             machine.username,
-             machine.conn_type);
-    }
+    mvprintw(3, 0,
+            "%-15s | %-15s | %-6d | %-18s | %-15s",
+            machine.name,
+            machine.address,
+            machine.port,
+            machine.username,
+            machine.conn_type);
     attroff(COLOR_PAIR(3));
 
     // Ligne d'aide

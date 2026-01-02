@@ -28,10 +28,8 @@ void valider_options(program_options *options);
 
 void free_options(program_options *opt);
 
-void dry_run(program_options *options);
-
 void free_options(program_options *opt);
 
-void dry_run(program_options *options);
+int dry_run();
 
 #endif
