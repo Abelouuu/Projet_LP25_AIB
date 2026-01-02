@@ -14,7 +14,7 @@ typedef struct {
 } remote_machine;
 
 // Lire le fichier de configuration et remplir la liste des machines distantes
-void lire_config(const char *path);
+int lire_config(const char *path);
 
 // Ajouter une machine distante à la liste
 void ajouter_machine(remote_machine machine);

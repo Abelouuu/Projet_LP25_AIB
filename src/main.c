@@ -29,10 +29,18 @@ int main(int argc, char **argv) {
     }
 
     if (opts.remote_config) {
-        lire_config(opts.remote_config);
+        if(lire_config(opts.remote_config)== -1){
+            return -1;
+        };
     } 
     if(opts.remote_server) {
         ajouter_machine_utilisateur(opts.remote_server, opts.username, opts.password, opts.port, opts.connection_type);
+    }
+
+    if (opts.dry_run) {
+        dry_run();
+        free_machine_list();
+        return 0;
     }
 
     if(liste_machines[0].port == 22){

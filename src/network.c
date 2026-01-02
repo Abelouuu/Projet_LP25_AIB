@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <signal.h>
+#include <sys/stat.h>
 
 //Vérifie si la machine est déja dans la liste des machines (doublons)
 static int machine_existe(char *adress){
@@ -19,12 +20,33 @@ static int machine_existe(char *adress){
     return 0; // La machine n'existe pas
 }
 
+static int verifier_droits_config(const char *chemin) {
+    struct stat st;
+    if (stat(chemin, &st) != 0) {
+        perror("Erreur stat");
+        return -1; // échec
+    }
+
+    // Vérifie que le fichier est en 600 (rw-------)
+    if ((st.st_mode & 0777) != 0600) {
+        printf("Attention : le fichier %s n'a pas les bons droits.\n", chemin);
+        return -1; // droits incorrects
+    }
+
+    printf("Le fichier %s a les bons droits.\n", chemin);
+    return 0; // droits corrects
+}
+
 // Lis le fichier de config donnée en paramètre
-void lire_config(const char *chemin){
+int lire_config(const char *chemin){
     FILE *fichier = fopen(chemin, "r");
     if (!fichier) {
         perror("Erreur lors de l'ouverture du fichier de configuration");
-        return;
+        return -1;
+    }
+    if(verifier_droits_config(chemin) == -1) {
+        perror("le fichier config n'as pas les bon droits");
+        return -1;
     }
     char ligne[256];
     while (fgets(ligne, sizeof(ligne), fichier)) {
@@ -51,6 +73,7 @@ void lire_config(const char *chemin){
         }
     }
     fclose(fichier);
+    return 0;
 }
 
 // Ajoute une machine distante à la liste des machines
@@ -62,7 +85,6 @@ void ajouter_machine(remote_machine machine){
     }
     liste_machines[nb_machines] = machine;
     nb_machines++;
-    printf("Machine locale ajoutée. %d\n", nb_machines);
 }
 
 // Créer la machine a partir des données entrée par l'utilisateur et l'ajoute à la liste des machines
@@ -81,19 +103,19 @@ void ajouter_machine_utilisateur(char *address, char *username, char *password, 
 }
 
 // ajouter la machine local (cet ajout sert essentiellement de repère pour les indices. Ex: liste_machine[1] => première machine distante)
-void ajouter_machine_local() {
+void ajouter_machine_local(void) {
     remote_machine machine;
-    
-    machine.name = strdup("Localhost");
-    machine.address = "";
-    machine.port = 0;
-    machine.username = "localuser";
-    machine.password = "";
-    machine.conn_type = "";
 
-    //Ajouter la machine a la liste
+    machine.name = strdup("Localhost");
+    machine.address = strdup("127.0.0.1");
+    machine.port = 0;
+    machine.username = strdup("localuser");
+    machine.password = strdup("");
+    machine.conn_type = strdup("local");
+
     ajouter_machine(machine);
 }
+
 
 //libérer l'espace des machines
 void free_machine_list(){
