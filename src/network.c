@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <signal.h>
+#include <sys/stat.h>
 
 //Vérifie si la machine est déja dans la liste des machines (doublons)
 static int machine_existe(char *adress){
@@ -19,12 +20,33 @@ static int machine_existe(char *adress){
     return 0; // La machine n'existe pas
 }
 
+static int verifier_droits_config(const char *chemin) {
+    struct stat st;
+    if (stat(chemin, &st) != 0) {
+        perror("Erreur stat");
+        return -1; // échec
+    }
+
+    // Vérifie que le fichier est en 600 (rw-------)
+    if ((st.st_mode & 0777) != 0600) {
+        printf("Attention : le fichier %s n'a pas les bons droits.\n", chemin);
+        return -1; // droits incorrects
+    }
+
+    printf("Le fichier %s a les bons droits.\n", chemin);
+    return 0; // droits corrects
+}
+
 // Lis le fichier de config donnée en paramètre
-void lire_config(const char *chemin){
+int lire_config(const char *chemin){
     FILE *fichier = fopen(chemin, "r");
     if (!fichier) {
         perror("Erreur lors de l'ouverture du fichier de configuration");
-        return;
+        return -1;
+    }
+    if(verifier_droits_config(chemin) == -1) {
+        perror("le fichier config n'as pas les bon droits");
+        return -1;
     }
     char ligne[256];
     while (fgets(ligne, sizeof(ligne), fichier)) {
@@ -51,6 +73,7 @@ void lire_config(const char *chemin){
         }
     }
     fclose(fichier);
+    return 0;
 }
 
 // Ajoute une machine distante à la liste des machines
