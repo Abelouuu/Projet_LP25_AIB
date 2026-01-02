@@ -1,4 +1,4 @@
-EXEC=GestionRessources
+EXEC=htopLP25
 CC=gcc
 CFLAGS=-Wall -Wextra -Werror -g -Iinclude
 
