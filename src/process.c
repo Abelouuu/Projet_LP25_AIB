@@ -19,7 +19,7 @@ Process *read_proc(int sockfd, ssh_session session) {
     if (sockfd >= 0) {
         /* lecture via Telnet */
         if (telnet_exec(sockfd,
-                     "ps -eo pid,user,rss,pmem,state,comm --no-headers\n",
+                     "ps -eo pid,user,pcpu,pmem,state,args --no-headers\n",
                      output) != 0) {
             return NULL;
         }
@@ -27,14 +27,14 @@ Process *read_proc(int sockfd, ssh_session session) {
     } else if (session) {
         /* lecture via SSH */
         if (ssh_exec(session,
-                     "ps -eo pid,user,rss,pmem,state,comm --no-headers",
+                     "ps -eo pid,user,pcpu,pmem,state,args --no-headers",
                      output,
                      sizeof(output)) != 0) {
             return NULL;
         }
     } else {
         /* lecture locale */
-        FILE *fp = popen("ps -eo pid,user,rss,pmem,state,comm --no-headers", "r");
+        FILE *fp = popen("ps -eo pid,user,pcpu,pmem,state,args --no-header", "r");
         if (!fp) {
             return NULL;
         }
@@ -64,10 +64,10 @@ Process *read_proc(int sockfd, ssh_session session) {
         memset(proc, 0, sizeof(Process));
 
         if (sscanf(line,
-           "%d %31s %ld %lf %c %255s",
+           "%d %31s %lf %lf %c %255s",
            &proc->pid,
            proc->user,
-           &proc->mem_kb,
+           &proc->cpu_pct,
            &proc->mem_pct,
            &proc->state,
            proc->cmd) != 6) {
@@ -90,46 +90,6 @@ Process *read_proc(int sockfd, ssh_session session) {
 
     return head;
 }
-
-// lire MemTotal (RAM totale) depuis /proc/meminfo, en kB
-static long get_total_mem_kb(void) {
-    FILE *f = fopen("/proc/meminfo", "r");
-    if (!f) {
-        perror("fopen /proc/meminfo");
-        return 0;
-    }
-
-    char line[256];
-    long mem_total = 0;
-
-    while (fgets(line, sizeof(line), f)) {
-        if (strncmp(line, "MemTotal:", 9) == 0) {
-            // ex: "MemTotal:       16343428 kB"
-            sscanf(line, "MemTotal: %ld kB", &mem_total);
-            break;
-        }
-    }
-
-    fclose(f);
-    return mem_total;
-}
-
-// calcul du pourcentage de mémoire (%MEM)
-void update_mem_percentage(Process *head) {
-    long total_kb = get_total_mem_kb();
-    if (total_kb <= 0) {
-        // impossible de calculer, on met tout à 0
-        for (Process *p = head; p; p = p->next) {
-            p->mem_pct = 0.0;
-        }
-        return;
-    }
-
-    for (Process *p = head; p; p = p->next) { // calcule de memoire par percentage
-        p->mem_pct = (double)p->mem_kb * 100.0 / (double)total_kb;
-    }
-}
-
 // tri par %MEM décroissant
 Process *sort_by_mem(Process *head) {
     Process *sorted = NULL;

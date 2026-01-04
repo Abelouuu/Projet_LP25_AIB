@@ -127,8 +127,8 @@ void affichePrinc(Process *list, int selected, remote_machine machine) {
 
     // Titres des processus
     attron(COLOR_PAIR(5));
-    mvprintw(9, 0, "%s\t%s\t%s\t%s\t%s",
-             "PID", "USER", "MEM(%)", "ST", "CMD");
+    mvprintw(9, 0, "%s\t%s\t%s\t%s\t%s\t%s",
+             "PID", "USER","CPU(%)", "MEM(%)", "ST", "CMD");
     attroff(COLOR_PAIR(5));
 
     if (list == NULL)
@@ -164,12 +164,12 @@ void affichePrinc(Process *list, int selected, remote_machine machine) {
             }
 
             if (max_cmd_len > 0) {
-                mvprintw(row, 0, "%d\t%s\t%2.2f\t%c\t%.*s",
-                        p->pid, p->user, p->mem_pct, p->state,
+                mvprintw(row, 0, "%d\t%s\t%2.2f\t%2.2f\t%c\t%.*s",
+                        p->pid, p->user,p->cpu_pct, p->mem_pct, p->state,
                         max_cmd_len, p->cmd);
             } else {
-                mvprintw(row, 0, "%d\t%s\t%2.2f\t%c\t",
-                        p->pid, p->user, p->mem_pct, p->state);
+                mvprintw(row, 0, "%d\t%s\t%2.2f\t%2.2f\t%c\t",
+                        p->pid, p->user, p->cpu_pct, p->mem_pct, p->state);
             }
 
             if (idx == selected) {

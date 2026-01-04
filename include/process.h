@@ -7,7 +7,7 @@
 typedef struct Process {
     int   pid;               // PID du processus
     char  user[32];          // nom d'utilisateur
-    long  mem_kb;            // mémoire résidente en kB
+    double cpu_pct;
     double mem_pct;          // pourcentage de la RAM totale (%MEM)
     char  state;             // état (R, S, D, T, Z, etc.)
     char  cmd[256];          // nom de la commande
@@ -16,8 +16,6 @@ typedef struct Process {
 
 Process *read_proc(int sockfd, ssh_session session);
 
-// calcule le %MEM pour chaque processus (en lisant /proc/meminfo)
-void update_mem_percentage(Process *head);
 
 // trie la liste par %MEM décroissant (plus gourmand en premier)
 Process *sort_by_mem(Process *head);
