@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    //=====================Connection à la première machine si nécessaire ================//
     if(liste_machines[0].port == 22){
         current_ssh_session = connection_ssh(&liste_machines[0]);
     } else {
@@ -83,7 +84,6 @@ int main(int argc, char **argv) {
             //bug dans la récupération locale
             break;
         } else {
-            update_mem_percentage(listproc);
             listproc = sort_by_mem(listproc);
 
             for (Process *p = listproc; p != NULL; p = p->next) {
