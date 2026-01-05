@@ -1,1 +1,0 @@
-/* Implémente les fonctionnalités pour orchestration de tous les modules */

@@ -2,6 +2,7 @@
 #define OPTIONS_H
 
 #include <stdbool.h>
+#include "global.h"
 
 // Structure pour contenir les options du programme
 typedef struct{
@@ -27,10 +28,8 @@ void valider_options(program_options *options);
 
 void free_options(program_options *opt);
 
-void dry_run(program_options *options);
-
 void free_options(program_options *opt);
 
-void dry_run(program_options *options);
+int dry_run();
 
 #endif

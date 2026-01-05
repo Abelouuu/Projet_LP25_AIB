@@ -1,4 +1,4 @@
-EXEC=GestionRessources
+EXEC=htopLP25
 CC=gcc
 CFLAGS=-Wall -Wextra -Werror -g -Iinclude
 
@@ -11,7 +11,7 @@ OBJS := $(patsubst src/%.c,obj/%.o,$(SRCS))
 all: $(EXEC)
 # création de l'exécutable
 $(EXEC): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -lncurses
+	$(CC) $(CFLAGS) -o $@ $^ -lncurses -lssh
 
 # création des fichiers objets
 obj/%.o: src/%.c

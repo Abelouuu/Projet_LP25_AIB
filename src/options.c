@@ -5,6 +5,8 @@
 #include <ctype.h>
 
 #include "options.h"
+#include "network.h"
+#include "process.h"
 
 void initialiser_options(program_options *options) {
     options->help = false;
@@ -108,8 +110,8 @@ void traiter_options(int argc, char **argv, program_options *options){
 
 void valider_options(program_options *options) {
     // -a necessite -c et -s
-    if (options->all && (options->remote_config == NULL || options->remote_server == NULL)) {
-        printf("L'option --all nécessite que --connection-type et --remote-server soient spécifiés.\n");
+    if (options->all && options->remote_config == NULL && options->remote_server == NULL) {
+        printf("L'option --all nécessite que --remote-config ou --remote-server soient spécifiés.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -172,12 +174,12 @@ void valider_options(program_options *options) {
     //si -s est rentré, alors -u et -p doivent contenir une valeur
     if (options->remote_server) {
         if(!options->username){
-            printf("username de la machine %s: ", options->remote_server);
+            printf("username de la machine %s: ", options->username);
             options->username = malloc(100);
             scanf("%99s", options->username);
         }
         if(!options->password) {
-            printf("password de la machine %s: ", options->remote_server);
+            printf("password de la machine %s: ", options->username);
             options->password = malloc(100);
             scanf("%99s", options->password);
         }
@@ -193,51 +195,59 @@ void free_options(program_options *opt) {
     free(opt->password);
 }
 
-/*void dry_run(program_options *options)
-{
-    printf("[INFO] Mode dry-run activé.\n");
+int dry_run(void) {
+    for (int i = 0; i < nb_machines; i++) {
+        remote_machine *m = &liste_machines[i];
 
-    // Test local
-    if (tester_acces_local()) {
-        printf("[OK] Accès aux processus locaux.\n");
-    } else {
-        printf("[ERREUR] Impossible d’accéder aux processus locaux.\n");
-    }
-
-    // Test distant via fichier de config
-    if (options->remote_config) {
-        liste_serveurs *serveurs = charger_config(options->remote_config);
-
-        for (int i = 0; i < serveurs->count; i++) {
-            serveur_info *srv = &serveurs->tab[i];
-
-            if (tester_connexion(srv)) {
-                printf("[OK] Connexion à %s (%s).\n", srv->nom, srv->adresse);
-            } else {
-                printf("[ERREUR] Connexion échouée à %s.\n", srv->nom);
-                continue;
+        //si c'est la machine local
+        if (strcmp(m->name, "Localhost") == 0) {
+            Process *p = read_proc(-1, NULL);
+            if (!p) {
+                fprintf(stderr, "Dry-run: échec accès processus locaux\n");
+                return -1;
+            }
+            free_processes(p);
+        } 
+        //si c'est la machine connecté via ssh
+        else if (m->port == 22) {
+            ssh_session s = connection_ssh(m);
+            if (!s) {
+                fprintf(stderr, "Dry-run: échec connexion SSH (%s)\n", m->name);
+                return -1;
             }
 
-            if (tester_processus_distants(srv)) {
-                printf("[OK] Récupération des processus sur %s.\n", srv->nom);
-            } else {
-                printf("[ERREUR] Échec lors de la récupération des processus sur %s.\n", srv->nom);
+            Process *p = read_proc(-1, s);
+            if (!p) {
+                fprintf(stderr, "Dry-run: échec lecture processus SSH (%s)\n", m->name);
+                ssh_disconnect(s);
+                ssh_free(s);
+                return -1;
             }
+
+            free_processes(p);
+            ssh_disconnect(s);
+            ssh_free(s);
+        } 
+        //si c'est la machine connecté via telnet
+        else {
+            int sock = connection_telnet(m);
+            if (sock == -1) {
+                fprintf(stderr, "Dry-run: échec connexion Telnet (%s)\n", m->name);
+                return -1;
+            }
+
+            Process *p = read_proc(sock, NULL);
+            if (!p) {
+                fprintf(stderr, "Dry-run: échec lecture processus Telnet (%s)\n", m->name);
+                close(sock);
+                return -1;
+            }
+
+            free_processes(p);
+            close(sock);
         }
     }
 
-    // Test distant via -s
-    if (options->remote_server) {
-        serveur_info srv;
-        srv.adresse = options->remote_server;
-        srv.username = options->username;
-        srv.password = options->password;
-        srv.type = options->connection_type;
-
-        if (tester_connexion(&srv)) {
-            printf("[OK] Connexion à %s.\n", srv.adresse);
-        } else {
-            printf("[ERREUR] Connexion échouée à %s.\n", srv.adresse);
-        }
-    }
-}*/
+    printf("Dry-run: succès.\n");
+    return 0;
+}
