@@ -34,7 +34,7 @@ Process *read_proc(int sockfd, ssh_session session) {
         }
     } else {
         /* lecture locale */
-        FILE *fp = popen("ps -eo pid,user,pcpu,pmem,state,args --no-header", "r");
+        FILE *fp = popen("ps -eo pid,user,pcpu,pmem,state,args --no-headers", "r");
         if (!fp) {
             return NULL;
         }
